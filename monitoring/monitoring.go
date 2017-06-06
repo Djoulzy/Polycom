@@ -41,7 +41,7 @@ type ServerMetrics struct {
 	MXM      int
 	NBS      int
 	MXS      int
-	BRTHLST  map[string]string
+	BRTHLST  map[string]bool
 }
 
 type ClientsRegister struct {
@@ -65,8 +65,8 @@ var UpTime time.Duration
 var MachineLoad *load.AvgStat
 var nbcpu int
 var cr ClientsRegister
-var AddBrother = make(chan (*map[string]string))
-var brotherlist = make(map[string]string)
+var AddBrother = make(chan string)
+var brotherlist = make(map[string]bool)
 
 func getMemUsage() string {
 	v, _ := mem.VirtualMemory()
@@ -78,10 +78,8 @@ func getSwapUsage() string {
 	return fmt.Sprintf("<th>Swap</th><td class='memCell'>%v Mo</td><td class='memCell'>%v Mo</td><td class='memCell'>%.1f%%</td>", (v.Total / 1048576), (v.Free / 1048576), v.UsedPercent)
 }
 
-func addToBrothersList(newlist *map[string]string) {
-	for name, serv := range *newlist {
-		brotherlist[name] = serv
-	}
+func addToBrothersList(addr string) {
+	brotherlist[addr] = true
 	clog.Test("monitoring", "addToBrothersList", "Brother List: %s", brotherlist)
 }
 
@@ -148,7 +146,7 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 	}()
 }
 
-func Start(hub *Hub.Hub, p *Params, list *map[string]string) {
+func Start(hub *Hub.Hub, p *Params) {
 	// addToBrothersList(list)
 	LoadAverage(hub, p)
 }

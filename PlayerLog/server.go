@@ -186,7 +186,7 @@ func main() {
 		MaxServersConns:   conf.MaxServersConns,
 		MaxIncommingConns: conf.MaxIncommingConns,
 	}
-	go monitoring.Start(hub, mon_params, &conf.KnownBrothers.Servers)
+	go monitoring.Start(hub, mon_params)
 
 	tcp_params := &TCPServer.Manager{
 		ServerName:               conf.Name,

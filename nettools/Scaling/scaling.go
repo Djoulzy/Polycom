@@ -141,21 +141,21 @@ func (slist *ServersList) checkingNewServers() {
 	}
 }
 
-func (slist *ServersList) AddNewUnknownServer(list *map[string]string) {
-	for name, serv := range *list {
-		if serv != slist.localAddr {
-			clog.Info("Scaling", "AddNewUnknownServer", "Adding %s to scaling procedure.", serv)
-			slist.nodes[serv] = &NearbyServer{
+func (slist *ServersList) AddNewUnknownServer(list *map[string]bool) {
+	for addr, _ := range *list {
+		if addr != slist.localAddr {
+			clog.Info("Scaling", "AddNewUnknownServer", "Adding %s to scaling procedure.", addr)
+			slist.nodes[addr] = &NearbyServer{
 				manager: &TCPServer.Manager{
-					ServerName: name,
-					Tcpaddr:    serv,
+					ServerName: "Unknown",
+					Tcpaddr:    addr,
 					Hub:        nil,
 				},
 				connected: false,
 			}
+			monitoring.AddBrother <- addr
 		}
 	}
-	monitoring.AddBrother <- list
 }
 
 func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
@@ -171,9 +171,7 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 		connected: true,
 		hubclient: c,
 	}
-	bro := map[string]string{}
-	bro[c.Name] = c.Addr
-	monitoring.AddBrother <- &bro
+	monitoring.AddBrother <- c.Addr
 }
 
 func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
@@ -193,8 +191,8 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 			},
 			connected: false,
 		}
+		monitoring.AddBrother <- serv
 	}
-	monitoring.AddBrother <- list
 	return slist
 }
 
