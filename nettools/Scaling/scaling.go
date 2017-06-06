@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	clog "watchever.com/CLog"
+
 	// "github.com/davecgh/go-spew/spew"
-	"github.com/Djoulzy/Polycom/CLog"
+
 	"github.com/Djoulzy/Polycom/Hub"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/nettools/TCPServer"
@@ -47,6 +49,7 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.cpuload = metrics.LAVG
 		serv.freeslots = (metrics.MXU - metrics.NBU)
 		serv.httpaddr = metrics.HTTPADDR
+
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
 		hub.Status <- mess
 	}
@@ -136,14 +139,28 @@ func (slist *ServersList) checkingNewServers() {
 	}
 }
 
-func (slist *ServersList) AddNewServer(c *Hub.Client) {
-	clog.Info("Scaling", "AddNewServer", "Commit of server %s to scaling procedure.", c.Name)
+func (slist *ServersList) AddNewUnknownServer(list *map[string]string) {
+	for name, serv := range *list {
+		slist.nodes[serv] = &NearbyServer{
+			manager: &TCPServer.Manager{
+				ServerName: name,
+				Tcpaddr:    serv,
+				Hub:        conf.Hub,
+			},
+			connected: false,
+		}
+	}
+	monitoring.AddBrother <- list
+}
+
+func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
+	clog.Info("Scaling", "AddNewConnectedServer", "Commit of server %s to scaling procedure.", c.Name)
 
 	c.CallToAction = slist.CallToActionTCP
 	slist.nodes[c.Addr] = &NearbyServer{
 		manager: &TCPServer.Manager{
 			ServerName: c.Name,
-			Hub:        c.Hub,
+			Hub:        nil,
 			Tcpaddr:    c.Addr,
 		},
 		connected: true,
@@ -167,7 +184,7 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 			manager: &TCPServer.Manager{
 				ServerName: name,
 				Tcpaddr:    serv,
-				Hub:        conf.Hub,
+				Hub:        nil,
 			},
 			connected: false,
 		}
