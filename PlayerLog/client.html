@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<script> 
+
+var conn;
+
+var print = function(message) {
+    var d = document.createElement("div");
+    d.innerHTML = message;
+    output.appendChild(d);
+};
+
+function Connection() {
+    this.createConnection = function(addr)
+    {
+        var ws = new WebSocket ('ws://'+addr+'/ws');
+
+        ws.onopen = function(evt) {
+            print("OPEN");
+            name = document.getElementById("HandShake").value
+            print("HANDSHAKE: " + name);
+            ws.send(name);
+        };
+
+        ws.onclose = function(evt) {
+            print("CLOSE: " +  evt.reason);
+            ws = null;
+            disconnect()
+        };
+
+        ws.onmessage = function(evt) {
+            print("RESPONSE: " + evt.data);
+            var n = evt.data.indexOf("REDIRECT");
+            if (n >= 0) {
+                var addr = evt.data.substr(9);
+                ws.close();
+                reconnect(addr)
+            }
+        };
+
+        ws.onerror = function(evt) {
+            print("ERROR: " + evt.data);
+        };
+
+        close = function()
+        {
+            ws.close();
+        };
+
+        send = function(val)
+        {
+            ws.send(val);
+        }
+
+        return ws;
+    }
+}
+
+function reconnect(addr)
+{
+    print("TRYING "+addr);
+    conn = new Connection().createConnection(addr);
+};
+
+function disconnect()
+{
+    conn = null;
+}
+
+window.addEventListener("load", function(evt) {
+
+    var output = document.getElementById("output");
+    var input = document.getElementById("input");
+
+    document.getElementById("open").onclick = function(evt) {
+        if (conn != null) return false;
+        conn = new Connection().createConnection('{{.Host}}');
+        return false;
+    };
+
+    document.getElementById("send").onclick = function(evt) {
+        if (conn == null) return false;
+        print("SEND: " + input.value);
+        conn.send(input.value);
+        return false;
+    };
+
+    document.getElementById("close").onclick = function(evt) {
+        conn.close();
+        conn = null;
+        return false;
+    };
+});
+
+</script>
+</head>
+<body>
+<table>
+<tr><td valign="top" width="50%">
+<form>
+HandShake: <br/><input id="HandShake" type="text" value="62,253907,WEB,wmsa,BR">
+<button id="open">Open</button>
+<button id="close">Close</button>
+<p>
+Messages: <br/><input id="input" type="text" value="Hello world!">
+<button id="send">Send</button>
+</form>
+</td><td valign="top" width="50%">
+<div id="output"></div>
+</td></tr></table>
+</body>
+</html>
