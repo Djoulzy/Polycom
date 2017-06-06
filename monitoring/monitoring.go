@@ -79,6 +79,9 @@ func getSwapUsage() string {
 }
 
 func addToBrothersList(srv map[string]string) {
+	for name, addr := range srv {
+		brotherlist[name] = addr
+	}
 	// brotherlist[addr] = true
 	clog.Test("monitoring", "addToBrothersList", "Brother List: %s", srv)
 }
