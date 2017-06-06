@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	clog "watchever.com/CLog"
+	clog "github.com/Djoulzy/Polycom/CLog"
 
 	// "github.com/davecgh/go-spew/spew"
 
@@ -49,6 +49,8 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.cpuload = metrics.LAVG
 		serv.freeslots = (metrics.MXU - metrics.NBU)
 		serv.httpaddr = metrics.HTTPADDR
+
+		slist.AddNewUnknownServer(&metrics.BRTHLST)
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
 		hub.Status <- mess
@@ -141,13 +143,16 @@ func (slist *ServersList) checkingNewServers() {
 
 func (slist *ServersList) AddNewUnknownServer(list *map[string]string) {
 	for name, serv := range *list {
-		slist.nodes[serv] = &NearbyServer{
-			manager: &TCPServer.Manager{
-				ServerName: name,
-				Tcpaddr:    serv,
-				Hub:        conf.Hub,
-			},
-			connected: false,
+		if serv != slist.localAddr {
+			clog.Info("Scaling", "AddNewUnknownServer", "Adding %s to scaling procedure.", serv)
+			slist.nodes[serv] = &NearbyServer{
+				manager: &TCPServer.Manager{
+					ServerName: name,
+					Tcpaddr:    serv,
+					Hub:        nil,
+				},
+				connected: false,
+			}
 		}
 	}
 	monitoring.AddBrother <- list
@@ -160,7 +165,7 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 	slist.nodes[c.Addr] = &NearbyServer{
 		manager: &TCPServer.Manager{
 			ServerName: c.Name,
-			Hub:        nil,
+			Hub:        c.Hub,
 			Tcpaddr:    c.Addr,
 		},
 		connected: true,
@@ -184,7 +189,7 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 			manager: &TCPServer.Manager{
 				ServerName: name,
 				Tcpaddr:    serv,
-				Hub:        nil,
+				Hub:        conf.Hub,
 			},
 			connected: false,
 		}

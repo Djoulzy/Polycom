@@ -43,7 +43,7 @@ func (m *Manager) reader(c *Hub.Client) {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
-
+		clog.Trace("TCPserver", "reader", "Reading %s", message)
 		// long, err := conn.Read(message)
 		// if err != nil {
 		// 	break
@@ -66,7 +66,7 @@ func (m *Manager) writer(c *Hub.Client) {
 			clog.Trace("TCPserver", "writer", "closing conn")
 			return
 		case message, ok := <-c.Send:
-			clog.Debug("TCPserver", "writer", "Sending %s", message)
+			// clog.Debug("TCPserver", "writer", "Sending %s", message)
 			if !ok {
 				// The hub closed the channel.
 				return

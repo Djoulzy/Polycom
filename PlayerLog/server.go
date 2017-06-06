@@ -5,13 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Djoulzy/Polycom/CLog"
+	clog "github.com/Djoulzy/Polycom/CLog"
+	urlcrypt "github.com/Djoulzy/Polycom/URLCrypt"
+	scaling "github.com/Djoulzy/Polycom/nettools/Scaling"
+
 	"github.com/Djoulzy/Polycom/Hub"
 	"github.com/Djoulzy/Polycom/PlayerLog/Config"
-	"github.com/Djoulzy/Polycom/URLCrypt"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/nettools/HTTPServer"
-	"github.com/Djoulzy/Polycom/nettools/Scaling"
 	"github.com/Djoulzy/Polycom/nettools/TCPServer"
 )
 
@@ -124,7 +125,7 @@ func HandShakeTCP(c *Hub.Client, cmd []string) {
 		c.Hub.Newrole(&Hub.ConnModifier{Client: c, NewName: name, NewType: ctype})
 		if len(cmd) == 4 {
 			c.Addr = cmd[3]
-			scaleList.AddNewServer(c)
+			scaleList.AddNewConnectedServer(c)
 		}
 	} else {
 		clog.Warn("server", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)

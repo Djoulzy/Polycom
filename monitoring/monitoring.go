@@ -7,11 +7,12 @@ import (
 	"runtime"
 	"time"
 
+	clog "github.com/Djoulzy/Polycom/CLog"
+
+	"github.com/Djoulzy/Polycom/Hub"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/Djoulzy/Polycom/CLog"
-	"github.com/Djoulzy/Polycom/Hub"
 )
 
 const statsTimer = 5 * time.Second
@@ -81,7 +82,7 @@ func addToBrothersList(newlist *map[string]string) {
 	for name, serv := range *newlist {
 		brotherlist[name] = serv
 	}
-	clog.Test("", "", "%s", brotherlist)
+	clog.Test("monitoring", "addToBrothersList", "Brother List: %s", brotherlist)
 }
 
 func LoadAverage(hub *Hub.Hub, p *Params) {
@@ -133,7 +134,7 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 			} else {
 				if len(hub.Monitors)+len(hub.Servers) > 0 {
 					hub.SentMessByTicks = 0
-					clog.Trace("Monitoring", "LoadAverage", "%s", json)
+					// clog.Trace("Monitoring", "LoadAverage", "%s", json)
 					mess := Hub.NewMessage(Hub.ClientMonitor, nil, json)
 					hub.Status <- mess
 					mess = Hub.NewMessage(Hub.ClientServer, nil, append([]byte("MON|"), json...))
