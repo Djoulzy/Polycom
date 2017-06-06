@@ -51,7 +51,9 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.freeslots = (metrics.MXU - metrics.NBU)
 		serv.httpaddr = metrics.HTTPADDR
 
-		slist.AddNewUnknownServer(&metrics.BRTHLST)
+		for name, serv := range metrics.BRTHLST {
+			slist.AddNewPotentialServer(name, serv)
+		}
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
 		hub.Status <- mess
@@ -142,23 +144,6 @@ func (slist *ServersList) checkingNewServers() {
 	}
 }
 
-func (slist *ServersList) AddNewUnknownServer(list *map[string]bool) {
-	for addr, _ := range *list {
-		if addr != slist.localAddr {
-			clog.Info("Scaling", "AddNewUnknownServer", "Adding %s to scaling procedure.", addr)
-			slist.nodes[addr] = &NearbyServer{
-				manager: &TCPServer.Manager{
-					ServerName: "Unknown",
-					Tcpaddr:    addr,
-					Hub:        slist.Hub,
-				},
-				connected: false,
-			}
-			monitoring.AddBrother <- addr
-		}
-	}
-}
-
 func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 	clog.Info("Scaling", "AddNewConnectedServer", "Commit of server %s to scaling procedure.", c.Name)
 
@@ -172,7 +157,20 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 		connected: true,
 		hubclient: c,
 	}
-	monitoring.AddBrother <- c.Addr
+	newSrv := make(map[string]string)
+	newSrv[c.Name] = c.Addr
+	monitoring.AddBrother <- newSrv
+}
+
+func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
+	slist.nodes[addr] = &NearbyServer{
+		manager: &TCPServer.Manager{
+			ServerName: name,
+			Tcpaddr:    addr,
+			Hub:        slist.Hub,
+		},
+		connected: false,
+	}
 }
 
 func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
@@ -185,15 +183,7 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 	}
 
 	for name, serv := range *list {
-		slist.nodes[serv] = &NearbyServer{
-			manager: &TCPServer.Manager{
-				ServerName: name,
-				Tcpaddr:    serv,
-				Hub:        conf.Hub,
-			},
-			connected: false,
-		}
-		monitoring.AddBrother <- serv
+		slist.AddNewPotentialServer(name, serv)
 	}
 	return slist
 }
