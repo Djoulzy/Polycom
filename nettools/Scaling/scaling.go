@@ -32,6 +32,7 @@ type ServersList struct {
 	localName       string
 	localAddr       string
 	MaxServersConns int
+	Hub             *Hub.Hub
 }
 
 func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
@@ -149,7 +150,7 @@ func (slist *ServersList) AddNewUnknownServer(list *map[string]bool) {
 				manager: &TCPServer.Manager{
 					ServerName: "Unknown",
 					Tcpaddr:    addr,
-					Hub:        nil,
+					Hub:        slist.Hub,
 				},
 				connected: false,
 			}
@@ -180,6 +181,7 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 		localName:       conf.ServerName,
 		localAddr:       conf.Tcpaddr,
 		MaxServersConns: conf.MaxServersConns,
+		Hub:             conf.Hub,
 	}
 
 	for name, serv := range *list {
