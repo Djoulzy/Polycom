@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"watchever.com/CLog"
-	"watchever.com/URLCrypt"
+	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/URLCrypt"
 )
 
 const (

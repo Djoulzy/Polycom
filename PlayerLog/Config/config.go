@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-ini/ini"
 
-	"watchever.com/CLog"
+	"github.com/Djoulzy/Polycom/CLog"
 )
 
 type ServerID struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	// "github.com/davecgh/go-spew/spew"
-	"watchever.com/CLog"
+	"github.com/Djoulzy/Polycom/CLog"
 )
 
 const (

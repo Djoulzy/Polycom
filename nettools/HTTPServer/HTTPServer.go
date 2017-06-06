@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"time"
 
-	"watchever.com/CLog"
-	"watchever.com/Hub"
-	"watchever.com/monitoring"
+	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/monitoring"
 )
 
 const (

@@ -20,7 +20,7 @@ func main() {
 	m1.Id = dns.Id()
 	m1.RecursionDesired = true
 	m1.Question = make([]dns.Question, 1)
-	m1.Question[0] = dns.Question{"www.watchever.com.", dns.TypeSRV, dns.ClassINET}
+	m1.Question[0] = dns.Question{"www.github.com/Djoulzy/Polycom.", dns.TypeSRV, dns.ClassINET}
 
 	c := new(dns.Client)
 	in, err := dns.Exchange(m1, "8.8.8.8:53")
@@ -32,7 +32,7 @@ func main() {
 		fmt.Printf("%s\n", in)
 	}
 
-	srvName := "watchever.com"
+	srvName := "github.com/Djoulzy/Polycom"
 	cfg, err := lb.DefaultConfig()
 	if err != nil {
 		panic(err)

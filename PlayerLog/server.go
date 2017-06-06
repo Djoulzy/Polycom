@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"watchever.com/CLog"
-	"watchever.com/Hub"
-	"watchever.com/PlayerLog/Config"
-	"watchever.com/URLCrypt"
-	"watchever.com/monitoring"
-	"watchever.com/nettools/HTTPServer"
-	"watchever.com/nettools/Scaling"
-	"watchever.com/nettools/TCPServer"
+	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/PlayerLog/Config"
+	"github.com/Djoulzy/Polycom/URLCrypt"
+	"github.com/Djoulzy/Polycom/monitoring"
+	"github.com/Djoulzy/Polycom/nettools/HTTPServer"
+	"github.com/Djoulzy/Polycom/nettools/Scaling"
+	"github.com/Djoulzy/Polycom/nettools/TCPServer"
 )
 
 var conf *Config.Data

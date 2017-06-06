@@ -2,7 +2,7 @@ package Kafka
 
 import (
 	"github.com/Shopify/sarama"
-	"watchever.com/CLog"
+	"github.com/Djoulzy/Polycom/CLog"
 )
 
 const (

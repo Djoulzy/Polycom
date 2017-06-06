@@ -10,8 +10,8 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
-	"watchever.com/CLog"
-	"watchever.com/Hub"
+	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/Hub"
 )
 
 const statsTimer = 5 * time.Second

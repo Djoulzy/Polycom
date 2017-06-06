@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
-	"watchever.com/CLog"
+	"github.com/Djoulzy/Polycom/CLog"
 )
 
 type Cypher struct {

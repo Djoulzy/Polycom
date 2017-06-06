@@ -8,10 +8,10 @@ import (
 	"time"
 
 	// "github.com/davecgh/go-spew/spew"
-	"watchever.com/CLog"
-	"watchever.com/Hub"
-	"watchever.com/monitoring"
-	"watchever.com/nettools/TCPServer"
+	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/monitoring"
+	"github.com/Djoulzy/Polycom/nettools/TCPServer"
 )
 
 var serverCheckPeriod = 10 * time.Second
