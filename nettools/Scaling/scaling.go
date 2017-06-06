@@ -38,7 +38,7 @@ type ServersList struct {
 func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 	hub := serv.manager.Hub
 	if len(hub.Monitors)+len(hub.Servers) > 0 {
-		clog.Debug("Scaling", "updateMetrics", "Update Metrics for %s", serv.hubclient.Name)
+		clog.Debug("Scaling", "updateMetrics", "Update Metrics for %s", serv.manager.Tcpaddr)
 
 		var metrics monitoring.ServerMetrics
 

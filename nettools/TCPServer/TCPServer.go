@@ -104,6 +104,7 @@ func (m *Manager) newClient(conn *net.TCPConn, name string, cta Hub.CallToAction
 	client := &Hub.Client{Hub: m.Hub, Conn: conn, Quit: make(chan bool),
 		CType: Hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: conn.RemoteAddr().String(),
 		Identified: false, Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket", Mode: Hub.ReadWrite}
+	clog.Test("", "", "%s", client)
 	m.Hub.Register <- client
 	return client
 }
