@@ -58,7 +58,7 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		}
 
 		newSrv := make(map[string]string)
-		newSrv[node.manager.ServerName] = fmt.Sprintf("TCP@%s|HTTP@%s", addr, serv.httpaddr)
+		newSrv[metrics.SID] = fmt.Sprintf("TCP@%s|HTTP@%s", metrics.TCPADDR, metrics.HTTPADDR)
 		monitoring.AddBrother <- newSrv
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
