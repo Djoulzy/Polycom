@@ -25,23 +25,21 @@ function Connection() {
         };
 
         ws.onclose = function(evt) {
-			alert (evt.code)
 			switch(evt.code)
 			{
 				case 1005:
-            		print("CLOSE By Client: " +  evt.reason);
+            		print("CLOSE By Client");
+                    ws = null;
+                    disconnect()
 					break;
 				case 1006:
 				default:
-            		print("CLOSE By SERVER: " +  evt.reason);
+            		print("CLOSE By SERVER");
 					for (let item of brothers) {
 						if (reconnect(item)) break;
 					}
 					break;
 			}
-
-            ws = null;
-            disconnect()
         };
 
         ws.onmessage = function(evt) {
@@ -55,7 +53,7 @@ function Connection() {
 					obj = JSON.parse(evt.data.substr(10));
 					for (var k in obj.BRTHLST){
 					    if (obj.BRTHLST.hasOwnProperty(k))
-							 brothers.add(obj.BRTHLST[k])
+							 brothers.add(obj.BRTHLST[k].Httpaddr)
 					}
 					break;
 			}
