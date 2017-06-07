@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <head>
 <meta charset="utf-8">
-<script> 
+<script>
 
 var conn;
 
@@ -15,6 +15,7 @@ function Connection() {
     this.createConnection = function(addr)
     {
         var ws = new WebSocket ('ws://'+addr+'/ws');
+		var brothers = new Set();
 
         ws.onopen = function(evt) {
             print("OPEN");
@@ -24,28 +25,45 @@ function Connection() {
         };
 
         ws.onclose = function(evt) {
-            print("CLOSE: " +  evt.reason);
+			alert (evt.code)
+			switch(evt.code)
+			{
+				case 1005:
+            		print("CLOSE By Client: " +  evt.reason);
+					break;
+				case 1006:
+				default:
+            		print("CLOSE By SERVER: " +  evt.reason);
+					for (let item of brothers) {
+						if (reconnect(item)) break;
+					}
+					break;
+			}
+
             ws = null;
             disconnect()
         };
 
         ws.onmessage = function(evt) {
             print("RESPONSE: " + evt.data);
-            var n = evt.data.indexOf("REDIRECT");
-            if (n >= 0) {
-                var addr = evt.data.substr(9);
-                ws.close();
-                reconnect(addr)
-            }
+			switch(evt.data.substr(0, 9))
+			{
+				case "REDIRECT":
+					print("REDIRECT: " +  evt.data);
+					break;
+				case "FLLBCKSRV":
+					obj = JSON.parse(evt.data.substr(10));
+					for (var k in obj.BRTHLST){
+					    if (obj.BRTHLST.hasOwnProperty(k))
+							 brothers.add(obj.BRTHLST[k])
+					}
+					break;
+			}
+			console.log(brothers);
         };
 
         ws.onerror = function(evt) {
             print("ERROR: " + evt.data);
-        };
-
-        close = function()
-        {
-            ws.close();
         };
 
         send = function(val)
@@ -60,7 +78,7 @@ function Connection() {
 function reconnect(addr)
 {
     print("TRYING "+addr);
-    conn = new Connection().createConnection(addr);
+    return conn = new Connection().createConnection(addr);
 };
 
 function disconnect()
@@ -99,7 +117,7 @@ window.addEventListener("load", function(evt) {
 <table>
 <tr><td valign="top" width="50%">
 <form>
-HandShake: <br/><input id="HandShake" type="text" value="62,253907,WEB,wmsa,BR">
+HandShake: <br/><input id="HandShake" type="text" value="BGtRlX8Awlkp6Myq07_hpw/3MooY08x2wt56w9viNaafsqCnx3ekKay4hoPSGtSAnuna34dITvj_XjoZu30lN2G">
 <button id="open">Open</button>
 <button id="close">Close</button>
 <p>

@@ -44,6 +44,10 @@ type ServerMetrics struct {
 	BRTHLST  map[string]string
 }
 
+type BrotherList struct {
+	BRTHLST map[string]string
+}
+
 type ClientsRegister struct {
 	ID   ClientList
 	Name ClientList
@@ -126,7 +130,13 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 				MXS:      p.MaxServersConns,
 				BRTHLST:  brotherlist,
 			}
+
+			newBrthList := BrotherList{
+				BRTHLST: brotherlist,
+			}
+
 			// clog.Test("monitoring", "addToBrothersList", "Brother List: %s", brotherlist)
+			brth_json, _ := json.Marshal(newBrthList)
 			json, err := json.Marshal(newStats)
 			if err != nil {
 				clog.Error("Monitoring", "LoadAverage", "MON: Cannot send server metrics to listeners ...")
@@ -138,6 +148,8 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 					hub.Status <- mess
 					mess = Hub.NewMessage(Hub.ClientServer, nil, append([]byte("MON|"), json...))
 					hub.Status <- mess
+					mess = Hub.NewMessage(Hub.ClientUser, nil, append([]byte("FLLBCKSRV|"), brth_json...))
+					hub.Broadcast <- mess
 				}
 			}
 		}

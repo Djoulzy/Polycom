@@ -51,11 +51,15 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.freeslots = (metrics.MXU - metrics.NBU)
 		serv.httpaddr = metrics.HTTPADDR
 
-		for name, serv := range metrics.BRTHLST {
-			if serv != slist.localAddr {
-				slist.AddNewPotentialServer(name, serv)
+		for name, tcpaddr := range metrics.BRTHLST {
+			if tcpaddr != slist.localAddr {
+				slist.AddNewPotentialServer(name, tcpaddr)
 			}
 		}
+
+		newSrv := make(map[string]string)
+		newSrv[node.manager.ServerName] = fmt.Sprintf("TCP@%s|HTTP@%s", addr, serv.httpaddr)
+		monitoring.AddBrother <- newSrv
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
 		hub.Status <- mess
@@ -141,6 +145,9 @@ func (slist *ServersList) checkingNewServers() {
 				wg.Wait()
 				node.connected = true
 				// slist.HandShakeTCP(node.manager.Hub.Incomming[name], []byte(name))
+				// newSrv := make(map[string]string)
+				// newSrv[node.manager.ServerName] = addr
+				// monitoring.AddBrother <- newSrv
 			}
 		}
 	}

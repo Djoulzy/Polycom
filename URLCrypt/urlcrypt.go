@@ -7,9 +7,11 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"math/rand"
 	"strings"
 	"time"
+
 	"github.com/Djoulzy/Polycom/CLog"
 )
 
@@ -128,6 +130,9 @@ func (uc *Cypher) Encrypt_b64(text string) ([]byte, error) {
 
 func (uc *Cypher) Decrypt_b64(enc_text string) ([]byte, error) {
 	encoded_str := strings.Split(enc_text, "/")
+	if len(encoded_str) < 2 {
+		return nil, errors.New("Bad string scheme")
+	}
 
 	padder := "===="
 	iv_pad := ""
