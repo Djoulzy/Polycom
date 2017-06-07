@@ -82,8 +82,6 @@ func addToBrothersList(srv map[string]string) {
 	for name, addr := range srv {
 		brotherlist[name] = addr
 	}
-	// brotherlist[addr] = true
-	clog.Test("monitoring", "addToBrothersList", "Brother List: %s", srv)
 }
 
 func LoadAverage(hub *Hub.Hub, p *Params) {
@@ -128,7 +126,7 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 				MXS:      p.MaxServersConns,
 				BRTHLST:  brotherlist,
 			}
-
+			// clog.Test("monitoring", "addToBrothersList", "Brother List: %s", brotherlist)
 			json, err := json.Marshal(newStats)
 			if err != nil {
 				clog.Error("Monitoring", "LoadAverage", "MON: Cannot send server metrics to listeners ...")
