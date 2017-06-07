@@ -9,8 +9,8 @@ import (
 	urlcrypt "github.com/Djoulzy/Polycom/URLCrypt"
 	scaling "github.com/Djoulzy/Polycom/nettools/Scaling"
 
+	"github.com/Djoulzy/Polycom/Config"
 	"github.com/Djoulzy/Polycom/Hub"
-	"github.com/Djoulzy/Polycom/PlayerLog/Config"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/nettools/HTTPServer"
 	"github.com/Djoulzy/Polycom/nettools/TCPServer"
@@ -18,11 +18,7 @@ import (
 
 var conf *Config.Data
 
-var cryptor = &urlcrypt.Cypher{
-	HASH_SIZE: 8,
-	HEX_KEY:   []byte("d87fbb277eefe245ee384b6098637513462f5151336f345778706b462f724473"),
-	HEX_IV:    []byte("046b51957f00c25929e8ccaad3bfe1a7"),
-}
+var cryptor *urlcrypt.Cypher
 
 var HTTPManager HTTPServer.Manager
 var TCPManager TCPServer.Manager
@@ -170,6 +166,12 @@ func main() {
 
 	clog.LogLevel = conf.LogLevel
 	clog.StartLogging = conf.StartLogging
+
+	cryptor = &urlcrypt.Cypher{
+		HASH_SIZE: conf.HASH_SIZE,
+		HEX_KEY:   []byte(conf.HEX_KEY),
+		HEX_IV:    []byte(conf.HEX_IV),
+	}
 
 	hub := Hub.NewHub()
 	// hub.UsersMonitor = monitoring.UserMonitoring

@@ -2,12 +2,13 @@ package HTTPServer
 
 import (
 	"bytes"
-	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/Djoulzy/Polycom/CLog"
 	"github.com/Djoulzy/Polycom/Hub"
@@ -145,7 +146,7 @@ func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
 		monitoring.MachineLoad.String(),
 	}
 
-	homeTempl, err := template.ParseFiles("status.html")
+	homeTempl, err := template.ParseFiles("../html/status.html")
 	if err != nil {
 		clog.Error("HTTPServer", "statusPage", "%s", err)
 		return
@@ -160,7 +161,7 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 		m.Httpaddr,
 	}
 
-	homeTempl, err := template.ParseFiles("client.html")
+	homeTempl, err := template.ParseFiles("../html/client.html")
 	if err != nil {
 		clog.Error("HTTPServer", "testPage", "%s", err)
 		return

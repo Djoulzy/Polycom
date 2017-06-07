@@ -43,7 +43,7 @@ func (m *Manager) reader(c *Hub.Client) {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
-		clog.Trace("TCPserver", "reader", "Reading %s", message)
+		// clog.Trace("TCPserver", "reader", "Reading %s", message)
 		// long, err := conn.Read(message)
 		// if err != nil {
 		// 	break

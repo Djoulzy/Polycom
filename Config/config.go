@@ -47,6 +47,12 @@ type TCPServerConfig struct {
 	ScalingCheckServerPeriod int
 }
 
+type Encryption struct {
+	HASH_SIZE int
+	HEX_KEY   string
+	HEX_IV    string
+}
+
 type Data struct {
 	ServerID
 	Globals
@@ -55,6 +61,7 @@ type Data struct {
 	KnownBrothers
 	HTTPServerConfig
 	TCPServerConfig
+	Encryption
 }
 
 func Load() (*Data, error) {
@@ -81,6 +88,11 @@ func Load() (*Data, error) {
 			ConnectTimeOut:           2,
 			WriteTimeOut:             1,
 			ScalingCheckServerPeriod: 10,
+		},
+		Encryption{
+			HASH_SIZE: 8,
+			HEX_KEY:   "0000000000000000000000000000000000000000000000000000000000000000",
+			HEX_IV:    "00000000000000000000000000000000",
 		},
 	}
 
