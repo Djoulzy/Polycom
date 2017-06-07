@@ -2,6 +2,8 @@ package Config
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/go-ini/ini"
 
@@ -86,7 +88,7 @@ func Load() (*Data, error) {
 	conf.TCPaddr = *flag.String("tcpaddr", "localhost:8081", "tcp service address")
 	flag.Parse()
 
-	cfg, err := ini.Load("../server.ini")
+	cfg, err := ini.Load(fmt.Sprintf("%s/etc/server.ini", os.Getenv("GOPATH")))
 	if err != nil {
 		clog.Error("server", "getConf", "Invalid conf file: %s", err)
 		return conf, err
