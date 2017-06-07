@@ -52,7 +52,9 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.httpaddr = metrics.HTTPADDR
 
 		for name, serv := range metrics.BRTHLST {
-			slist.AddNewPotentialServer(name, serv)
+			if serv != slist.localAddr {
+				slist.AddNewPotentialServer(name, serv)
+			}
 		}
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
@@ -163,13 +165,15 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 }
 
 func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
-	slist.nodes[addr] = &NearbyServer{
-		manager: &TCPServer.Manager{
-			ServerName: name,
-			Tcpaddr:    addr,
-			Hub:        slist.Hub,
-		},
-		connected: false,
+	if slist.nodes[addr] == nil {
+		slist.nodes[addr] = &NearbyServer{
+			manager: &TCPServer.Manager{
+				ServerName: name,
+				Tcpaddr:    addr,
+				Hub:        slist.Hub,
+			},
+			connected: false,
+		}
 	}
 }
 
