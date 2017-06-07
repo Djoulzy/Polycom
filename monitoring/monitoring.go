@@ -19,6 +19,11 @@ const statsTimer = 5 * time.Second
 
 type ClientList map[string]*Hub.Client
 
+type Brother struct {
+	Tcpaddr  string
+	Httpaddr string
+}
+
 type ServerMetrics struct {
 	SID      string
 	TCPADDR  string
@@ -41,11 +46,11 @@ type ServerMetrics struct {
 	MXM      int
 	NBS      int
 	MXS      int
-	BRTHLST  map[string]string
+	BRTHLST  map[string]Brother
 }
 
 type BrotherList struct {
-	BRTHLST map[string]string
+	BRTHLST map[string]Brother
 }
 
 type ClientsRegister struct {
@@ -69,8 +74,8 @@ var UpTime time.Duration
 var MachineLoad *load.AvgStat
 var nbcpu int
 var cr ClientsRegister
-var AddBrother = make(chan map[string]string)
-var brotherlist = make(map[string]string)
+var AddBrother = make(chan map[string]Brother)
+var brotherlist = make(map[string]Brother)
 
 func getMemUsage() string {
 	v, _ := mem.VirtualMemory()
@@ -82,9 +87,9 @@ func getSwapUsage() string {
 	return fmt.Sprintf("<th>Swap</th><td class='memCell'>%v Mo</td><td class='memCell'>%v Mo</td><td class='memCell'>%.1f%%</td>", (v.Total / 1048576), (v.Free / 1048576), v.UsedPercent)
 }
 
-func addToBrothersList(srv map[string]string) {
-	for name, addr := range srv {
-		brotherlist[name] = addr
+func addToBrothersList(srv map[string]Brother) {
+	for name, infos := range srv {
+		brotherlist[name] = infos
 	}
 }
 
