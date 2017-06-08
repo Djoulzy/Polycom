@@ -113,6 +113,10 @@ func NewMessage(userType int, c *Client, content []byte) *Message {
 	return m
 }
 
+func (h *Hub) GetClientByName(userType int, name string) *Client {
+	return h.FullUsersList[userType][name]
+}
+
 func (h *Hub) register(client *Client) {
 	client.ID = fmt.Sprintf("%p", client)
 
@@ -239,6 +243,8 @@ func (h *Hub) Run() {
 			go h.unicast(message)
 		case message := <-h.Action:
 			go h.action(message)
+		case <-h.Done:
+			return
 		}
 	}
 }

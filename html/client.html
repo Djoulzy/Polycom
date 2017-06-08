@@ -4,6 +4,7 @@
 <script>
 
 var conn;
+var brothers = new Set();
 
 var print = function(message) {
     var d = document.createElement("div");
@@ -15,7 +16,6 @@ function Connection() {
     this.createConnection = function(addr)
     {
         var ws = new WebSocket ('ws://'+addr+'/ws');
-		var brothers = new Set();
 
         ws.onopen = function(evt) {
             print("OPEN");
@@ -35,15 +35,19 @@ function Connection() {
 				case 1006:
 				default:
             		print("CLOSE By SERVER");
+					console.log(brothers);
 					for (let item of brothers) {
-						if (reconnect(item)) break;
+						reconnect(item)
+						if (conn.readyState == 0) {
+							brothers.delete(item)
+						}
+						else break;
 					}
 					break;
 			}
         };
 
         ws.onmessage = function(evt) {
-            print("RESPONSE: " + evt.data);
 			switch(evt.data.substr(0, 9))
 			{
 				case "REDIRECT":
@@ -76,7 +80,8 @@ function Connection() {
 function reconnect(addr)
 {
     print("TRYING "+addr);
-    return conn = new Connection().createConnection(addr);
+    conn = new Connection().createConnection(addr);
+	return conn;
 };
 
 function disconnect()

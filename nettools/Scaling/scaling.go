@@ -147,10 +147,6 @@ func (slist *ServersList) checkingNewServers() {
 				go node.manager.NewOutgoingConn(conn, node.manager.ServerName, slist.localName, slist.localAddr, slist.CallToActionTCP, &wg)
 				wg.Wait()
 				node.connected = true
-				// slist.HandShakeTCP(node.manager.Hub.Incomming[name], []byte(name))
-				// newSrv := make(map[string]string)
-				// newSrv[node.manager.ServerName] = addr
-				// monitoring.AddBrother <- newSrv
 			}
 		}
 	}
@@ -169,9 +165,6 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 		connected: true,
 		hubclient: c,
 	}
-	// newSrv := make(map[string]string)
-	// newSrv[c.Name] = c.Addr
-	// monitoring.AddBrother <- newSrv
 }
 
 func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
@@ -196,8 +189,10 @@ func Init(conf *TCPServer.Manager, list *map[string]string) *ServersList {
 		Hub:             conf.Hub,
 	}
 
-	for name, serv := range *list {
-		slist.AddNewPotentialServer(name, serv)
+	if list != nil {
+		for name, serv := range *list {
+			slist.AddNewPotentialServer(name, serv)
+		}
 	}
 	return slist
 }
