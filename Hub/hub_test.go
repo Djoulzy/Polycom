@@ -1,6 +1,7 @@
 package Hub
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -30,32 +31,32 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, tmpClient, tmpHub.GetClientByName(tmpClient.CType, tmpClient.Name), "Registered Client should equal original Client")
 }
 
-// func TestUnegister(t *testing.T) {
-// 	tmpClient := newClient("test")
-//
-// 	go tmpHub.Run()
-// 	tmpHub.Register <- tmpClient
-// 	tmpHub.Unregister <- tmpClient
-// 	tmpHub.Done <- true
-//
-// 	assert.Nil(t, tmpHub.GetClientByName(tmpClient.CType, tmpClient.Name))
-// 	assert.Nil(t, tmpClient.Hub)
-// }
-//
-// func TestConcurrency(t *testing.T) {
-// 	var tmpClient *Client
-//
-// 	go tmpHub.Run()
-// 	for i := 0; i < 100; i++ {
-// 		tmpClient = newClient(fmt.Sprintf("%d", i))
-//
-// 		tmpHub.Register <- tmpClient
-// 		assert.Equal(t, tmpClient, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name], "Registered Client should equal original Client")
-// 		tmpHub.Unregister <- tmpClient
-// 		assert.Nil(t, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name])
-// 	}
-// 	tmpHub.Done <- true
-// }
+func TestUnegister(t *testing.T) {
+	tmpClient := newClient("test")
+
+	go tmpHub.Run()
+	tmpHub.Register <- tmpClient
+	tmpHub.Unregister <- tmpClient
+	tmpHub.Done <- true
+
+	assert.Nil(t, tmpHub.GetClientByName(tmpClient.CType, tmpClient.Name))
+	assert.Nil(t, tmpClient.Hub)
+}
+
+func TestConcurrency(t *testing.T) {
+	var tmpClient *Client
+
+	go tmpHub.Run()
+	for i := 0; i < 100; i++ {
+		tmpClient = newClient(fmt.Sprintf("%d", i))
+
+		tmpHub.Register <- tmpClient
+		assert.Equal(t, tmpClient, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name], "Registered Client should equal original Client")
+		tmpHub.Unregister <- tmpClient
+		assert.Nil(t, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name])
+	}
+	tmpHub.Done <- true
+}
 
 func TestMain(m *testing.M) {
 	tmpHub = NewHub()
