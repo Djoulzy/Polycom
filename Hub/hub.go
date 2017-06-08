@@ -36,6 +36,7 @@ type Client struct {
 	Conn interface{}
 
 	Send         chan []byte
+	Consistent   chan bool
 	Quit         chan bool
 	CallToAction CallToAction
 
@@ -113,8 +114,16 @@ func NewMessage(userType int, c *Client, content []byte) *Message {
 	return m
 }
 
-func (h *Hub) GetClientByName(userType int, name string) *Client {
+func (h *Hub) GetClientByName(name string, userType int) *Client {
 	return h.FullUsersList[userType][name]
+}
+
+func (h *Hub) UserExists(name string, userType int) bool {
+	if h.FullUsersList[userType][name] != nil {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (h *Hub) register(client *Client) {
@@ -130,9 +139,7 @@ func (h *Hub) register(client *Client) {
 }
 
 func (h *Hub) unregister(client *Client) {
-	var list map[string]*Client
-
-	list = h.FullUsersList[client.CType]
+	list := h.FullUsersList[client.CType]
 	if _, ok := list[client.Name]; ok {
 		if client.Conn != nil {
 			client.Quit <- true
@@ -207,34 +214,15 @@ func (h *Hub) action(message *Message) {
 	message.Dest.CallToAction(message.Dest, message.Content)
 }
 
-func (h *Hub) UserExists(name string, ctype int) bool {
-	var list map[string]*Client
-
-	switch ctype {
-	case ClientUndefined:
-		list = h.Incomming
-	case ClientUser:
-		list = h.Users
-	case ClientMonitor:
-		list = h.Monitors
-	case ClientServer:
-		list = h.Servers
-	}
-
-	if list[name] != nil {
-		return true
-	} else {
-		return false
-	}
-}
-
 func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.Register:
 			h.register(client)
+			client.Consistent <- true
 		case client := <-h.Unregister:
 			h.unregister(client)
+			client.Consistent <- true
 		case message := <-h.Status:
 			h.updateStatus(message)
 		case message := <-h.Broadcast:
