@@ -60,6 +60,8 @@ function Connection() {
 							 brothers.add(obj.BRTHLST[k].Httpaddr)
 					}
 					break;
+				default:
+					print("INCOMMING: " +  evt.data);
 			}
 			console.log(brothers);
         };

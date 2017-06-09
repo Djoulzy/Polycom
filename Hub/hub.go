@@ -141,13 +141,14 @@ func (h *Hub) register(client *Client) {
 func (h *Hub) unregister(client *Client) {
 	list := h.FullUsersList[client.CType]
 	if _, ok := list[client.Name]; ok {
-		if client.Conn != nil {
-			client.Quit <- true
+		select {
+		case client.Quit <- true:
 		}
+
 		client.Hub = nil
-		close(list[client.Name].Send)
+		close(client.Send)
+		close(client.Quit)
 		delete(list, client.Name)
-		clog.Info("Hub", "Unregister", "Client %s unregistered [%s] from %s.", client.Name, client.ID, CTYpeName[client.CType])
 		if client.CType == ClientServer {
 			data := struct {
 				SID  string
@@ -161,21 +162,28 @@ func (h *Hub) unregister(client *Client) {
 			clog.Trace("Hub", "Unregister", "Broadcasting close of server %s : %s", client.Name, json)
 			h.broadcast(mess)
 		}
+		clog.Info("Hub", "Unregister", "Client %s unregistered [%s] from %s.", client.Name, client.ID, CTYpeName[client.CType])
 	} else {
 		// clog.Error("Hub", "Unregister", "%s", spew.Sdump(client))
 	}
 }
 
 func (h *Hub) Newrole(modif *ConnModifier) {
-	// clog.Test("Hub", "newrole", "%s", modif)
 	if h.UserExists(modif.NewName, modif.NewType) {
-		clog.Warn("Hub", "Newrole", "Client already exists")
-		h.unregister(h.GetClientByName(modif.NewName, modif.NewType))
+		formerClient := h.GetClientByName(modif.NewName, modif.NewType)
+		clog.Test("", "", "%d", len(formerClient.Send))
+		formerClient.Quit <- true
+		// h.unregister(h.GetClientByName(modif.NewName, modif.NewType))
+		// h.GetClientByName(modif.NewName, modif.NewType).Quit <- true
+		clog.Warn("Hub", "Newrole", "Client already exists ... Deleting")
 	}
 	delete(h.FullUsersList[modif.Client.CType], modif.Client.Name)
+	clog.Test("", "", "deleting %s from %s", modif.Client.Name, modif.Client.CType)
 	modif.Client.Name = modif.NewName
 	modif.Client.CType = modif.NewType
+	// h.register(modif.Client)
 	// modif.Client.Identified = true
+	clog.Test("", "", "Old client %s", h.FullUsersList[modif.NewType][modif.NewName])
 	h.FullUsersList[modif.NewType][modif.NewName] = modif.Client
 }
 
@@ -200,8 +208,8 @@ func (h *Hub) broadcast(message *Message) {
 			case client.Send <- message.Content:
 				clog.Debug("Hub", "broadcast", "Broadcast %s Message : %s", CTYpeName[message.UserType], message.Content)
 				h.SentMessByTicks++
-			default:
-				h.unregister(client)
+				// default:
+				// 	h.unregister(client)
 			}
 		}
 	}
