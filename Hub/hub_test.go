@@ -60,7 +60,6 @@ func TestUnregister(t *testing.T) {
 func TestConcurrency(t *testing.T) {
 	var tmpClient *Client
 
-	go tmpHub.Run()
 	for i := 0; i < 100; i++ {
 		tmpClient = newClient(fmt.Sprintf("%d", i), ClientUser)
 
@@ -71,6 +70,28 @@ func TestConcurrency(t *testing.T) {
 		<-tmpClient.Consistent
 		assert.Nil(t, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name])
 	}
+}
+
+func TestMessages(t *testing.T) {
+	var tmpClient *Client
+
+	for i := 0; i < 10; i++ {
+		tmpClient = newClient(fmt.Sprintf("%d", i), ClientUser)
+
+		tmpHub.Register <- tmpClient
+		<-tmpClient.Consistent
+	}
+
+	mess := NewMessage(ClientUser, nil, []byte("OK"))
+	tmpHub.Broadcast <- mess
+
+	// var name string
+	for i := 0; i < 10; i++ {
+		name := fmt.Sprintf("%d", i)
+		client := tmpHub.GetClientByName(name, ClientUser)
+		assert.NotEqual(t, 0, len(client.Send), "Client should be replaced")
+	}
+
 }
 
 func TestMain(m *testing.M) {
