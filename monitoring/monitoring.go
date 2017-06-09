@@ -150,9 +150,9 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 					hub.SentMessByTicks = 0
 					// clog.Trace("Monitoring", "LoadAverage", "%s", json)
 					mess := Hub.NewMessage(Hub.ClientMonitor, nil, json)
-					hub.Status <- mess
+					hub.Broadcast <- mess
 					mess = Hub.NewMessage(Hub.ClientServer, nil, append([]byte("MON|"), json...))
-					hub.Status <- mess
+					hub.Broadcast <- mess
 					mess = Hub.NewMessage(Hub.ClientUser, nil, append([]byte("FLLBCKSRV|"), brth_json...))
 					hub.Broadcast <- mess
 				}

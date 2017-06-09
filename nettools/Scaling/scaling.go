@@ -65,7 +65,7 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		monitoring.AddBrother <- newSrv
 
 		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
-		hub.Status <- mess
+		hub.Broadcast <- mess
 	}
 }
 
@@ -78,6 +78,7 @@ func (slist *ServersList) HandShakeTCP(c *Hub.Client, cmd []string) {
 	if len(cmd) != 4 {
 		clog.Warn("Scaling", "HandShakeTCP", "Bad connect string from %s, disconnecting.", c.Name)
 		c.Hub.Unregister <- c
+		<-c.Consistent
 		return
 	}
 
@@ -91,6 +92,7 @@ func (slist *ServersList) HandShakeTCP(c *Hub.Client, cmd []string) {
 	} else {
 		clog.Warn("Scaling", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)
 		c.Hub.Unregister <- c
+		<-c.Consistent
 	}
 
 }
@@ -100,21 +102,23 @@ func (slist *ServersList) CallToActionTCP(c *Hub.Client, message []byte) {
 	if len(cmd_group) < 2 {
 		clog.Warn("Scaling", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
 		c.Hub.Unregister <- c
+		<-c.Consistent
 	} else {
 		switch cmd_group[0] {
 		case "HELLO":
 			slist.HandShakeTCP(c, cmd_group)
 		case "CMD":
-			if c.Identified {
+			if c.CType != Hub.ClientUndefined {
 				switch cmd_group[1] {
 				case "QUIT":
 					clog.Info("Scaling", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
 					c.Hub.Unregister <- c
+					<-c.Consistent
 				case "KILLUSER":
 					if c.Hub.UserExists(cmd_group[2], Hub.ClientUser) {
 						clog.Info("Scaling", "CallToActionTCP", "Killing user %s", cmd_group[2])
-
 						c.Hub.Unregister <- c.Hub.Users[cmd_group[2]]
+						<-c.Hub.Users[cmd_group[2]].Consistent
 					}
 				default:
 					clog.Warn("Scaling", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])

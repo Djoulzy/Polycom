@@ -18,11 +18,11 @@ const (
 
 var CTYpeName = [4]string{"Incomming", "Users", "Servers", "Monitors"}
 
-const (
-	ReadOnly  = 1
-	WriteOnly = 2
-	ReadWrite = 3
-)
+// const (
+// 	ReadOnly  = 1
+// 	WriteOnly = 2
+// 	ReadWrite = 3
+// )
 
 type CallToAction func(*Client, []byte)
 
@@ -40,7 +40,7 @@ type Client struct {
 	Quit         chan bool
 	CallToAction CallToAction
 
-	Identified bool
+	// Identified bool
 	Addr       string
 	CType      int
 	Name       string
@@ -49,7 +49,7 @@ type Client struct {
 	App_id     string
 	Country    string
 	User_agent string
-	Mode       int
+	// Mode       int
 }
 
 type Message struct {
@@ -79,10 +79,10 @@ type Hub struct {
 	Register   chan *Client
 	Unregister chan *Client
 	Broadcast  chan *Message
-	Status     chan *Message
-	Unicast    chan *Message
-	Action     chan *Message
-	Done       chan bool
+	// Status     chan *Message
+	Unicast chan *Message
+	Action  chan *Message
+	Done    chan bool
 }
 
 func NewHub() *Hub {
@@ -91,10 +91,10 @@ func NewHub() *Hub {
 		Unregister: make(chan *Client),
 
 		Broadcast: make(chan *Message),
-		Status:    make(chan *Message),
-		Unicast:   make(chan *Message),
-		Action:    make(chan *Message),
-		Done:      make(chan bool),
+		// Status:    make(chan *Message),
+		Unicast: make(chan *Message),
+		Action:  make(chan *Message),
+		Done:    make(chan bool),
 
 		Users:     make(map[string]*Client),
 		Incomming: make(map[string]*Client),
@@ -130,8 +130,8 @@ func (h *Hub) register(client *Client) {
 	client.ID = fmt.Sprintf("%p", client)
 
 	if h.UserExists(client.Name, client.CType) {
-		h.unregister(h.FullUsersList[client.CType][client.Name])
 		clog.Warn("Hub", "Register", "Client %s already exists ... replacing", client.Name)
+		h.unregister(h.FullUsersList[client.CType][client.Name])
 	}
 
 	h.FullUsersList[client.CType][client.Name] = client
@@ -159,7 +159,7 @@ func (h *Hub) unregister(client *Client) {
 			json, _ := json.Marshal(data)
 			mess := NewMessage(ClientMonitor, nil, json)
 			clog.Trace("Hub", "Unregister", "Broadcasting close of server %s : %s", client.Name, json)
-			h.updateStatus(mess)
+			h.broadcast(mess)
 		}
 	} else {
 		// clog.Error("Hub", "Unregister", "%s", spew.Sdump(client))
@@ -168,37 +168,41 @@ func (h *Hub) unregister(client *Client) {
 
 func (h *Hub) Newrole(modif *ConnModifier) {
 	// clog.Test("Hub", "newrole", "%s", modif)
+	if h.UserExists(modif.NewName, modif.NewType) {
+		clog.Warn("Hub", "Newrole", "Client already exists")
+		h.unregister(h.GetClientByName(modif.NewName, modif.NewType))
+	}
 	delete(h.FullUsersList[modif.Client.CType], modif.Client.Name)
 	modif.Client.Name = modif.NewName
 	modif.Client.CType = modif.NewType
-	modif.Client.Identified = true
+	// modif.Client.Identified = true
 	h.FullUsersList[modif.NewType][modif.NewName] = modif.Client
 }
 
-func (h *Hub) updateStatus(message *Message) {
-	var list map[string]*Client
+// func (h *Hub) updateStatus(message *Message) {
+// 	list := h.FullUsersList[message.UserType]
+// 	for _, client := range list {
+// 		if client.Identified && client.Mode != ReadOnly {
+// 			select {
+// 			case client.Send <- message.Content:
+// 			default:
+// 				h.unregister(client)
+// 			}
+// 		}
+// 	}
+// }
 
-	list = h.FullUsersList[message.UserType]
+func (h *Hub) broadcast(message *Message) {
+	list := h.FullUsersList[message.UserType]
 	for _, client := range list {
-		if client.Identified && client.Mode != ReadOnly {
+		if client.Hub != nil {
 			select {
 			case client.Send <- message.Content:
+				clog.Debug("Hub", "broadcast", "Broadcast %s Message : %s", CTYpeName[message.UserType], message.Content)
+				h.SentMessByTicks++
 			default:
 				h.unregister(client)
 			}
-		}
-	}
-}
-
-func (h *Hub) broadcast(message *Message) {
-	var list map[string]*Client
-
-	list = h.FullUsersList[message.UserType]
-	for _, client := range list {
-		if client.Hub != nil {
-			client.Send <- message.Content
-			clog.Debug("Hub", "broadcast", "Broadcast %s Message : %s", CTYpeName[message.UserType], message.Content)
-			h.SentMessByTicks++
 		}
 	}
 }
@@ -223,8 +227,8 @@ func (h *Hub) Run() {
 		case client := <-h.Unregister:
 			h.unregister(client)
 			client.Consistent <- true
-		case message := <-h.Status:
-			h.updateStatus(message)
+		// case message := <-h.Status:
+		// 	h.updateStatus(message)
 		case message := <-h.Broadcast:
 			h.broadcast(message)
 		case message := <-h.Unicast:

@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	clog "github.com/Djoulzy/Polycom/CLog"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +17,7 @@ func newClient(name string, userType int) *Client {
 		Hub: tmpHub, Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool, 8),
 		CType: userType, Send: make(chan []byte, 256),
 		CallToAction: nil, Addr: "127.0.0.1:8080",
-		Identified: false, Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "Test Socket", Mode: ReadWrite,
+		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "Test Socket",
 	}
 	return tmpClient
 }
@@ -65,10 +67,10 @@ func TestConcurrency(t *testing.T) {
 
 		tmpHub.Register <- tmpClient
 		<-tmpClient.Consistent
-		assert.Equal(t, tmpClient, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name], "Registered Client should equal original Client")
+		assert.Equal(t, tmpClient, tmpHub.GetClientByName(tmpClient.Name, tmpClient.CType), "Registered Client should equal original Client")
 		tmpHub.Unregister <- tmpClient
 		<-tmpClient.Consistent
-		assert.Nil(t, tmpHub.FullUsersList[tmpClient.CType][tmpClient.Name])
+		assert.Nil(t, tmpHub.GetClientByName(tmpClient.Name, tmpClient.CType))
 	}
 }
 
@@ -82,19 +84,52 @@ func TestMessages(t *testing.T) {
 		<-tmpClient.Consistent
 	}
 
-	mess := NewMessage(ClientUser, nil, []byte("OK"))
+	mess := NewMessage(ClientUser, nil, []byte("BROADCAST"))
 	tmpHub.Broadcast <- mess
 
-	// var name string
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("%d", i)
 		client := tmpHub.GetClientByName(name, ClientUser)
-		assert.NotEqual(t, 0, len(client.Send), "Client should be replaced")
+
+		message, ok := <-client.Send
+		if ok {
+			assert.Equal(t, "BROADCAST", string(message), "Message cannot be read from channel")
+		} else {
+			t.Fail()
+		}
 	}
 
+	mess = NewMessage(ClientUser, tmpClient, []byte("UNICAST"))
+	tmpHub.Unicast <- mess
+
+	message, ok := <-tmpClient.Send
+	if ok {
+		assert.Equal(t, "UNICAST", string(message), "Message cannot be read from channel")
+	} else {
+		t.Fail()
+	}
+}
+
+func TestNewRole(t *testing.T) {
+	tmpClient := newClient("0", ClientUser)
+	tmpHub.Register <- tmpClient
+	<-tmpClient.Consistent
+
+	newRole := &ConnModifier{
+		Client:  tmpClient,
+		NewName: "1",
+		NewType: ClientUser,
+	}
+
+	tmpHub.Newrole(newRole)
+	assert.Equal(t, tmpClient, tmpHub.GetClientByName("1", ClientUser), "Bad new Role")
+	assert.Nil(t, tmpHub.GetClientByName("0", ClientUser))
 }
 
 func TestMain(m *testing.M) {
+	clog.LogLevel = 5
+	clog.StartLogging = true
+
 	tmpHub = NewHub()
 	go tmpHub.Run()
 	os.Exit(m.Run())

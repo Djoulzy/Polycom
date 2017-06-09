@@ -101,11 +101,12 @@ func (m *Manager) Connect() (*net.TCPConn, error) {
 }
 
 func (m *Manager) newClient(conn *net.TCPConn, name string, cta Hub.CallToAction) *Hub.Client {
-	client := &Hub.Client{Hub: m.Hub, Conn: conn, Ready: make(chan bool), Quit: make(chan bool),
+	client := &Hub.Client{Hub: m.Hub, Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
 		CType: Hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: conn.RemoteAddr().String(),
-		Identified: false, Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket", Mode: Hub.ReadWrite}
+		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket"}
 	clog.Test("", "", "%s", client)
 	m.Hub.Register <- client
+	<-client.Consistent
 	return client
 }
 
@@ -119,6 +120,7 @@ func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName str
 	(*wg).Done()
 	m.reader(client)
 	m.Hub.Unregister <- client
+	<-client.Consistent
 }
 
 func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta Hub.CallToAction, wg *sync.WaitGroup) {
@@ -130,6 +132,7 @@ func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta Hub.CallToAction, wg *
 	(*wg).Done()
 	m.reader(client)
 	m.Hub.Unregister <- client
+	<-client.Consistent
 }
 
 func (m *Manager) Start(conf *Manager, cta Hub.CallToAction) {

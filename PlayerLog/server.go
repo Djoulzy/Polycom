@@ -31,9 +31,10 @@ func HandShakeHTTP(c *Hub.Client, message []byte) {
 		clog.Info("server", "HandShakeHTTP", "New Status Client %s", c.Name)
 		if len(hub.Monitors) >= conf.MaxMonitorsConns {
 			hub.Unregister <- c
+			<-c.Consistent
 		} else {
 			hub.Newrole(&Hub.ConnModifier{Client: c, NewName: c.Name, NewType: Hub.ClientMonitor})
-			c.Mode = Hub.WriteOnly
+			// c.Mode = Hub.WriteOnly
 			// test := <-hub.Done
 			// log.Printf("Chann %s\n", test)
 		}
@@ -44,12 +45,14 @@ func HandShakeHTTP(c *Hub.Client, message []byte) {
 		if len(infos) != 6 {
 			clog.Warn("server", "HandShakeHTTP", "Bad Handshake format ... Disconnecting")
 			hub.Unregister <- c
+			<-c.Consistent
 			return
 		}
 		content_id, err := strconv.Atoi(strings.TrimSpace(infos[1]))
 		if err != nil {
 			clog.Warn("server", "HandShakeHTTP", "Unrecognized content_id ... Disconnecting")
 			hub.Unregister <- c
+			<-c.Consistent
 			return
 		}
 
@@ -64,9 +67,10 @@ func HandShakeHTTP(c *Hub.Client, message []byte) {
 					clog.Error("server", "HandShakeHTTP", "NO FREE SLOTS !!!")
 				}
 				hub.Unregister <- c
+				<-c.Consistent
 			} else {
 				c.Hub.Newrole(&Hub.ConnModifier{Client: c, NewName: newName, NewType: Hub.ClientUser})
-				c.Mode = Hub.ReadWrite
+				// c.Mode = Hub.ReadWrite
 				c.Content_id = content_id
 				c.Front_id = strings.TrimSpace(infos[2])
 				c.App_id = strings.TrimSpace(infos[3])
@@ -79,13 +83,14 @@ func HandShakeHTTP(c *Hub.Client, message []byte) {
 		} else {
 			clog.Warn("server", "HandShakeHTTP", "Can't identify client... Disconnecting %s.", c.Name)
 			hub.Unregister <- c
+			<-c.Consistent
 		}
 		// lock.Unlock()
 	}
 }
 
 func CallToActionHTTP(c *Hub.Client, message []byte) {
-	if c.Identified {
+	if c.CType != Hub.ClientUndefined {
 		if c.CType == Hub.ClientUser {
 			mess := Hub.NewMessage(Hub.ClientUser, nil, message)
 			c.Hub.Broadcast <- mess
@@ -105,6 +110,7 @@ func HandShakeTCP(c *Hub.Client, cmd []string) {
 		if len(c.Hub.Servers) >= conf.MaxServersConns {
 			clog.Warn("server", "HandShakeTCP", "Too many Server connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(c.Hub.Incomming), len(c.Hub.Servers))
 			c.Hub.Unregister <- c
+			<-c.Consistent
 			return
 		}
 	} else {
@@ -112,6 +118,7 @@ func HandShakeTCP(c *Hub.Client, cmd []string) {
 		if len(c.Hub.Users) >= conf.MaxUsersConns {
 			clog.Warn("server", "HandShakeTCP", "Too many Users connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(c.Hub.Incomming), len(c.Hub.Users))
 			c.Hub.Unregister <- c
+			<-c.Consistent
 			return
 		}
 	}
@@ -126,6 +133,7 @@ func HandShakeTCP(c *Hub.Client, cmd []string) {
 	} else {
 		clog.Warn("server", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)
 		c.Hub.Unregister <- c
+		<-c.Consistent
 	}
 }
 
@@ -134,16 +142,18 @@ func CallToActionTCP(c *Hub.Client, message []byte) {
 	if len(cmd_group) < 2 {
 		clog.Warn("server", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
 		c.Hub.Unregister <- c
+		<-c.Consistent
 	} else {
 		switch cmd_group[0] {
 		case "HELLO":
 			HandShakeTCP(c, cmd_group)
 		case "CMD":
-			if c.Identified {
+			if c.CType != Hub.ClientUndefined {
 				switch cmd_group[1] {
 				case "quit":
 					clog.Info("server", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
 					c.Hub.Unregister <- c
+					<-c.Consistent
 				default:
 					clog.Warn("server", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
 					mess := Hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))

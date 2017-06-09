@@ -190,13 +190,15 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta Hub.Call
 		return
 	}
 
-	client := &Hub.Client{Hub: m.Hub, Conn: httpconn, Ready: make(chan bool, 1), Quit: make(chan bool),
+	client := &Hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
 		CType: Hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: httpconn.RemoteAddr().String(),
-		Identified: false, Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua, Mode: Hub.ReadWrite}
+		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
 	m.Hub.Register <- client
+	<-client.Consistent
 	go m.Writer(client)
 	m.Reader(client)
 	m.Hub.Unregister <- client
+	<-client.Consistent
 }
 
 func (m *Manager) Start(conf *Manager, cta Hub.CallToAction) {
