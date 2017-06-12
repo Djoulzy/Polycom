@@ -36,6 +36,7 @@ type ServersList struct {
 }
 
 func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
+	clog.Test("", "", "%s", message)
 	hub := serv.manager.Hub
 	if len(hub.Monitors)+len(hub.Servers) > 0 {
 		clog.Debug("Scaling", "updateMetrics", "Update Metrics for %s", serv.manager.Tcpaddr)
@@ -52,9 +53,7 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 		serv.httpaddr = metrics.HTTPADDR
 
 		for name, infos := range metrics.BRTHLST {
-			if infos.Tcpaddr != slist.localAddr {
-				slist.AddNewPotentialServer(name, infos.Tcpaddr)
-			}
+			slist.AddNewPotentialServer(name, infos.Tcpaddr)
 		}
 
 		newSrv := make(map[string]monitoring.Brother)
@@ -173,13 +172,15 @@ func (slist *ServersList) AddNewConnectedServer(c *Hub.Client) {
 
 func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
 	if slist.nodes[addr] == nil {
-		slist.nodes[addr] = &NearbyServer{
-			manager: &TCPServer.Manager{
-				ServerName: name,
-				Tcpaddr:    addr,
-				Hub:        slist.Hub,
-			},
-			connected: false,
+		if addr != slist.localAddr {
+			slist.nodes[addr] = &NearbyServer{
+				manager: &TCPServer.Manager{
+					ServerName: name,
+					Tcpaddr:    addr,
+					Hub:        slist.Hub,
+				},
+				connected: false,
+			}
 		}
 	}
 }

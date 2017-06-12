@@ -128,7 +128,7 @@ func TestNewRole(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	clog.LogLevel = 5
-	clog.StartLogging = true
+	clog.StartLogging = false
 
 	tmpHub = NewHub()
 	go tmpHub.Run()

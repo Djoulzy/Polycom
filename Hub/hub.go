@@ -126,6 +126,15 @@ func (h *Hub) UserExists(name string, userType int) bool {
 	}
 }
 
+func (h *Hub) IsRegistered(client *Client) bool {
+	if h.FullUsersList[client.CType][client.Name] != nil {
+		if h.FullUsersList[client.CType][client.Name].ID == client.ID {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *Hub) register(client *Client) {
 	client.ID = fmt.Sprintf("%p", client)
 
@@ -139,16 +148,17 @@ func (h *Hub) register(client *Client) {
 }
 
 func (h *Hub) unregister(client *Client) {
-	list := h.FullUsersList[client.CType]
-	if _, ok := list[client.Name]; ok {
+	if h.IsRegistered(client) {
+		delete(h.FullUsersList[client.CType], client.Name)
+		client.Hub = nil
+
 		select {
 		case client.Quit <- true:
 		}
 
-		client.Hub = nil
 		close(client.Send)
 		close(client.Quit)
-		delete(list, client.Name)
+
 		if client.CType == ClientServer {
 			data := struct {
 				SID  string
@@ -164,41 +174,20 @@ func (h *Hub) unregister(client *Client) {
 		}
 		clog.Info("Hub", "Unregister", "Client %s unregistered [%s] from %s.", client.Name, client.ID, CTYpeName[client.CType])
 	} else {
-		// clog.Error("Hub", "Unregister", "%s", spew.Sdump(client))
+		clog.Warn("Hub", "Unregister", "Trying to unregister unknown client : %s", client.Name)
 	}
 }
 
 func (h *Hub) Newrole(modif *ConnModifier) {
 	if h.UserExists(modif.NewName, modif.NewType) {
-		formerClient := h.GetClientByName(modif.NewName, modif.NewType)
-		clog.Test("", "", "%d", len(formerClient.Send))
-		formerClient.Quit <- true
-		// h.unregister(h.GetClientByName(modif.NewName, modif.NewType))
-		// h.GetClientByName(modif.NewName, modif.NewType).Quit <- true
 		clog.Warn("Hub", "Newrole", "Client already exists ... Deleting")
+		h.unregister(h.GetClientByName(modif.NewName, modif.NewType))
 	}
 	delete(h.FullUsersList[modif.Client.CType], modif.Client.Name)
-	clog.Test("", "", "deleting %s from %s", modif.Client.Name, modif.Client.CType)
 	modif.Client.Name = modif.NewName
 	modif.Client.CType = modif.NewType
-	// h.register(modif.Client)
-	// modif.Client.Identified = true
-	clog.Test("", "", "Old client %s", h.FullUsersList[modif.NewType][modif.NewName])
 	h.FullUsersList[modif.NewType][modif.NewName] = modif.Client
 }
-
-// func (h *Hub) updateStatus(message *Message) {
-// 	list := h.FullUsersList[message.UserType]
-// 	for _, client := range list {
-// 		if client.Identified && client.Mode != ReadOnly {
-// 			select {
-// 			case client.Send <- message.Content:
-// 			default:
-// 				h.unregister(client)
-// 			}
-// 		}
-// 	}
-// }
 
 func (h *Hub) broadcast(message *Message) {
 	list := h.FullUsersList[message.UserType]

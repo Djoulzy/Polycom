@@ -128,7 +128,6 @@ func (m *Manager) Writer(c *Hub.Client) {
 				return
 			}
 		case <-c.Quit:
-			clog.Debug("HTTPServer", "Writer", "Server Cancel connection")
 			return
 		}
 	}
@@ -198,10 +197,8 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta Hub.Call
 	<-client.Consistent
 	go m.Writer(client)
 	m.Reader(client)
-	clog.Test("HTTPServer", "wsConnect", "Client %s destroy avant %s", client.Name, client.Conn)
 	m.Hub.Unregister <- client
 	<-client.Consistent
-	clog.Test("HTTPServer", "wsConnect", "Client %s destroy apres", client.Name)
 }
 
 func (m *Manager) Start(conf *Manager, cta Hub.CallToAction) {

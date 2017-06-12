@@ -5,10 +5,14 @@ import (
 	"testing"
 
 	"github.com/Djoulzy/Polycom/Hub"
+
+	clog "github.com/Djoulzy/Polycom/CLog"
+
 	"github.com/Djoulzy/Polycom/nettools/TCPServer"
 	"github.com/stretchr/testify/assert"
 )
 
+var tmpHub *Hub.Hub
 var slist *ServersList
 
 func TestAddServer(t *testing.T) {
@@ -23,17 +27,25 @@ func TestAddServer(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	hub := Hub.NewHub()
+	clog.LogLevel = 5
+	clog.StartLogging = false
+
+	tmpHub = Hub.NewHub()
+	go tmpHub.Run()
+
 	tcp_params := &TCPServer.Manager{
 		ServerName:               "Test",
 		Tcpaddr:                  "127.0.0.1",
-		Hub:                      hub,
+		Hub:                      tmpHub,
 		ConnectTimeOut:           2,
 		WriteTimeOut:             1,
 		ScalingCheckServerPeriod: 5,
 		MaxServersConns:          5,
 	}
 
-	slist = Init(tcp_params, nil)
+	srvList := make(map[string]string)
+	srvList["srv2"] = "127.0.0.3"
+	srvList["srv2"] = "127.0.0.5"
+	slist = Init(tcp_params, &srvList)
 	os.Exit(m.Run())
 }
