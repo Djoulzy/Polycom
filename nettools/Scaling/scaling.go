@@ -36,8 +36,8 @@ type ServersList struct {
 }
 
 func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
-	clog.Test("", "", "%s", message)
 	hub := serv.manager.Hub
+	clog.Test("", "", "%d", len(hub.Monitors)+len(hub.Servers))
 	if len(hub.Monitors)+len(hub.Servers) > 0 {
 		clog.Debug("Scaling", "updateMetrics", "Update Metrics for %s", serv.manager.Tcpaddr)
 
@@ -56,15 +56,17 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 			slist.AddNewPotentialServer(name, infos.Tcpaddr)
 		}
 
-		newSrv := make(map[string]monitoring.Brother)
-		newSrv[metrics.SID] = monitoring.Brother{
-			Httpaddr: metrics.HTTPADDR,
-			Tcpaddr:  metrics.TCPADDR,
-		}
-		monitoring.AddBrother <- newSrv
+		if len(hub.Monitors) > 0 {
+			newSrv := make(map[string]monitoring.Brother)
+			newSrv[metrics.SID] = monitoring.Brother{
+				Httpaddr: metrics.HTTPADDR,
+				Tcpaddr:  metrics.TCPADDR,
+			}
+			monitoring.AddBrother <- newSrv
 
-		mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
-		hub.Broadcast <- mess
+			mess := Hub.NewMessage(Hub.ClientMonitor, nil, message)
+			hub.Broadcast <- mess
+		}
 	}
 }
 
