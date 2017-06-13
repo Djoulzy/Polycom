@@ -1,12 +1,11 @@
-package Hub
+package hub
 
 import (
 	"fmt"
 	"os"
 	"testing"
 
-	clog "github.com/Djoulzy/Polycom/CLog"
-
+	"github.com/Djoulzy/Polycom/clog"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Djoulzy/Polycom/clog"
 	"github.com/go-ini/ini"
-
-	"github.com/Djoulzy/Polycom/CLog"
 )
 
 type ServerID struct {

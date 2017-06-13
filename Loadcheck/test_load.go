@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Djoulzy/Polycom/CLog"
-	"github.com/Djoulzy/Polycom/URLCrypt"
+	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/urlcrypt"
 	"github.com/gorilla/websocket"
 )
 

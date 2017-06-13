@@ -1,11 +1,11 @@
-package Hub
+package hub
 
 import (
 	"encoding/json"
 	"fmt"
 
 	// "github.com/davecgh/go-spew/spew"
-	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/clog"
 )
 
 const (

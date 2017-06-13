@@ -1,13 +1,12 @@
 package main
 
 import (
+	"Polycom/Hub"
 	"fmt"
 	"strconv"
 	"strings"
 
-	clog "github.com/Djoulzy/Polycom/CLog"
-
-	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/clog"
 )
 
 func HandShakeHTTP(c *Hub.Client, message []byte) {

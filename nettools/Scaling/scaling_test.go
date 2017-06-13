@@ -1,13 +1,11 @@
 package scaling
 
 import (
+	"Polycom/Hub"
 	"os"
 	"testing"
 
-	"github.com/Djoulzy/Polycom/Hub"
-
-	clog "github.com/Djoulzy/Polycom/CLog"
-
+	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/nettools/TCPServer"
 	"github.com/stretchr/testify/assert"
 )

@@ -1,16 +1,17 @@
 package main
 
 import (
-	clog "github.com/Djoulzy/Polycom/CLog"
-	urlcrypt "github.com/Djoulzy/Polycom/URLCrypt"
-	scaling "github.com/Djoulzy/Polycom/nettools/Scaling"
-	"github.com/Djoulzy/Polycom/storage"
+	"Polycom/Hub"
 
-	"github.com/Djoulzy/Polycom/Config"
-	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/nettools/scaling"
+	"github.com/Djoulzy/Polycom/storage"
+	"github.com/Djoulzy/Polycom/urlcrypt"
+
+	"github.com/Djoulzy/Polycom/config"
 	"github.com/Djoulzy/Polycom/monitoring"
-	"github.com/Djoulzy/Polycom/nettools/HTTPServer"
-	"github.com/Djoulzy/Polycom/nettools/TCPServer"
+	"github.com/Djoulzy/Polycom/nettools/httpserver"
+	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 )
 
 var conf *Config.Data

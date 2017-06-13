@@ -1,6 +1,7 @@
-package HTTPServer
+package httpserver
 
 import (
+	"Polycom/Hub"
 	"bytes"
 	"html/template"
 	"log"
@@ -10,8 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/Djoulzy/Polycom/CLog"
-	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/monitoring"
 )
 

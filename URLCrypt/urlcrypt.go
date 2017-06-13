@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/clog"
 )
 
 type Cypher struct {

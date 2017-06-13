@@ -1,15 +1,15 @@
 package monitoring
 
 import (
+	"Polycom/Hub"
 	"encoding/json"
 	"fmt"
 	"math"
 	"runtime"
 	"time"
 
-	clog "github.com/Djoulzy/Polycom/CLog"
+	"github.com/Djoulzy/Polycom/clog"
 
-	"github.com/Djoulzy/Polycom/Hub"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"

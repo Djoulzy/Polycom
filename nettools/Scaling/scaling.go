@@ -1,19 +1,16 @@
 package scaling
 
 import (
+	"Polycom/Hub"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	clog "github.com/Djoulzy/Polycom/CLog"
-
-	// "github.com/davecgh/go-spew/spew"
-
-	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/monitoring"
-	"github.com/Djoulzy/Polycom/nettools/TCPServer"
+	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 )
 
 var serverCheckPeriod = 10 * time.Second

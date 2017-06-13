@@ -1,6 +1,7 @@
-package TCPServer
+package tcpserver
 
 import (
+	"Polycom/Hub"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -10,8 +11,7 @@ import (
 	"time"
 
 	// "github.com/davecgh/go-spew/spew"
-	"github.com/Djoulzy/Polycom/CLog"
-	"github.com/Djoulzy/Polycom/Hub"
+	"github.com/Djoulzy/Polycom/clog"
 )
 
 var (
