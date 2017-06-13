@@ -1,7 +1,6 @@
 package tcpserver
 
 import (
-	"Polycom/Hub"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/hub"
 )
 
 var (
@@ -22,14 +22,14 @@ var (
 type Manager struct {
 	Tcpaddr                  string
 	ServerName               string
-	Hub                      *Hub.Hub
+	Hub                      *hub.Hub
 	MaxServersConns          int
 	ConnectTimeOut           int
 	WriteTimeOut             int
 	ScalingCheckServerPeriod int
 }
 
-func (m *Manager) reader(c *Hub.Client) {
+func (m *Manager) reader(c *hub.Client) {
 	defer func() {
 		c.Conn.(*net.TCPConn).Close()
 	}()
@@ -54,7 +54,7 @@ func (m *Manager) reader(c *Hub.Client) {
 	}
 }
 
-func (m *Manager) writer(c *Hub.Client) {
+func (m *Manager) writer(c *hub.Client) {
 	defer func() {
 		c.Conn.(*net.TCPConn).Close()
 	}()
@@ -83,7 +83,7 @@ func (m *Manager) writer(c *Hub.Client) {
 	}
 }
 
-func GetAddr(c *Hub.Client) string {
+func GetAddr(c *hub.Client) string {
 	addr := c.Conn.(*net.TCPConn).RemoteAddr().String()
 	ip := strings.Split(string(addr), "|")
 	return ip[0]
@@ -100,19 +100,19 @@ func (m *Manager) Connect() (*net.TCPConn, error) {
 	return conn.(*net.TCPConn), err
 }
 
-func (m *Manager) newClient(conn *net.TCPConn, name string, cta Hub.CallToAction) *Hub.Client {
-	client := &Hub.Client{Hub: m.Hub, Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: Hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: conn.RemoteAddr().String(),
+func (m *Manager) newClient(conn *net.TCPConn, name string, cta hub.CallToAction) *hub.Client {
+	client := &hub.Client{Hub: m.Hub, Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: conn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket"}
 	m.Hub.Register <- client
 	<-client.Consistent
 	return client
 }
 
-func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, cta Hub.CallToAction, wg *sync.WaitGroup) {
+func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, cta hub.CallToAction, wg *sync.WaitGroup) {
 	clog.Debug("TCPserver", "NewOutgoingConn", "Contacting %s", conn.RemoteAddr().String())
 	client := m.newClient(conn, toName, cta)
-	mess := Hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", fromName, fromAddr)))
+	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", fromName, fromAddr)))
 	m.Hub.Unicast <- mess
 
 	go m.writer(client)
@@ -122,9 +122,9 @@ func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName str
 	<-client.Consistent
 }
 
-func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta Hub.CallToAction, wg *sync.WaitGroup) {
+func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta hub.CallToAction, wg *sync.WaitGroup) {
 	client := m.newClient(conn, conn.RemoteAddr().String(), cta)
-	mess := Hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", m.ServerName, m.Tcpaddr)))
+	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", m.ServerName, m.Tcpaddr)))
 	m.Hub.Unicast <- mess
 
 	go m.writer(client)
@@ -134,7 +134,7 @@ func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta Hub.CallToAction, wg *
 	<-client.Consistent
 }
 
-func (m *Manager) Start(conf *Manager, cta Hub.CallToAction) {
+func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
 	var wg sync.WaitGroup
 
 	m = conf

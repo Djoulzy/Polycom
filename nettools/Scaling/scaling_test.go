@@ -1,20 +1,20 @@
 package scaling
 
 import (
-	"Polycom/Hub"
 	"os"
 	"testing"
 
 	"github.com/Djoulzy/Polycom/clog"
-	"github.com/Djoulzy/Polycom/nettools/TCPServer"
+	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 	"github.com/stretchr/testify/assert"
 )
 
-var tmpHub *Hub.Hub
+var tmpHub *hub.Hub
 var slist *ServersList
 
-func newClient(name string, userType int) *Hub.Client {
-	tmpClient := &Hub.Client{
+func newClient(name string, userType int) *hub.Client {
+	tmpClient := &hub.Client{
 		Hub: tmpHub, Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool),
 		CType: userType, Send: make(chan []byte, 256),
 		CallToAction: nil, Addr: "10.31.100.200:8081",
@@ -35,7 +35,7 @@ func TestAddServer(t *testing.T) {
 }
 
 func TestAddNewConnectedServer(t *testing.T) {
-	regSrv := newClient("test1", Hub.ClientUndefined)
+	regSrv := newClient("test1", hub.ClientUndefined)
 	tmpHub.Register <- regSrv
 	<-regSrv.Consistent
 
@@ -58,7 +58,7 @@ func TestUpdateMetrics(t *testing.T) {
 }
 
 func TestRedirectConnection(t *testing.T) {
-	tmpClient := newClient("Toto", Hub.ClientUser)
+	tmpClient := newClient("Toto", hub.ClientUser)
 	tmpHub.Register <- tmpClient
 	<-tmpClient.Consistent
 
@@ -69,12 +69,12 @@ func TestRedirectConnection(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	clog.LogLevel = 5
-	clog.StartLogging = true
+	clog.StartLogging = false
 
-	tmpHub = Hub.NewHub()
+	tmpHub = hub.NewHub()
 	go tmpHub.Run()
 
-	tcp_params := &TCPServer.Manager{
+	tcp_params := &tcpserver.Manager{
 		ServerName:               "Test",
 		Tcpaddr:                  "127.0.0.1:8081",
 		Hub:                      tmpHub,
@@ -88,12 +88,6 @@ func TestMain(m *testing.M) {
 	srvList["srv2"] = "127.0.0.3"
 	srvList["srv2"] = "127.0.0.5"
 	slist = Init(tcp_params, &srvList)
-
-	// regSrv := newClient("test1", Hub.ClientServer)
-	// tmpHub.Register <- regSrv
-	// <-regSrv.Consistent
-	//
-	// slist.AddNewConnectedServer(regSrv)
 
 	os.Exit(m.Run())
 }

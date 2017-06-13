@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"Polycom/Hub"
 	"bytes"
 	"html/template"
 	"log"
@@ -12,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
 )
 
@@ -31,7 +31,7 @@ type Manager struct {
 	Httpaddr         string
 	ServerName       string
 	Upgrader         websocket.Upgrader
-	Hub              *Hub.Hub
+	Hub              *hub.Hub
 	ReadBufferSize   int
 	WriteBufferSize  int
 	HandshakeTimeout int
@@ -55,7 +55,7 @@ func (m *Manager) Connect() *websocket.Conn {
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (m *Manager) Reader(c *Hub.Client) {
+func (m *Manager) Reader(c *hub.Client) {
 	defer func() {
 		c.Conn.(*websocket.Conn).Close()
 	}()
@@ -99,7 +99,7 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 	return ws.WriteMessage(mt, message)
 }
 
-func (m *Manager) Writer(c *Hub.Client) {
+func (m *Manager) Writer(c *hub.Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -137,7 +137,7 @@ func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
 	var data = struct {
 		Host  string
 		Nb    int
-		Users map[string]*Hub.Client
+		Users map[string]*hub.Client
 		Stats string
 	}{
 		m.Httpaddr,
@@ -170,7 +170,7 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveWs handles websocket requests from the peer.
-func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta Hub.CallToAction) {
+func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta hub.CallToAction) {
 	httpconn, err := m.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		clog.Error("HTTPServer", "wsConnect", "%s", err)
@@ -185,13 +185,13 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta Hub.Call
 		ua = "n/a"
 	}
 
-	if m.Hub.UserExists(name, Hub.ClientUser) {
+	if m.Hub.UserExists(name, hub.ClientUser) {
 		clog.Warn("HTTPServer", "wsConnect", "Client %s already exists ... Refusing connection", name)
 		return
 	}
 
-	client := &Hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: Hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: httpconn.RemoteAddr().String(),
+	client := &hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: httpconn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
 	m.Hub.Register <- client
 	<-client.Consistent
@@ -201,7 +201,7 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta Hub.Call
 	<-client.Consistent
 }
 
-func (m *Manager) Start(conf *Manager, cta Hub.CallToAction) {
+func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
 	m = conf
 	m.Upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {

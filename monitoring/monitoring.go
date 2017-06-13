@@ -1,7 +1,6 @@
 package monitoring
 
 import (
-	"Polycom/Hub"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/hub"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
@@ -17,7 +17,7 @@ import (
 
 const statsTimer = 5 * time.Second
 
-type ClientList map[string]*Hub.Client
+type ClientList map[string]*hub.Client
 
 type Brother struct {
 	Tcpaddr  string
@@ -93,7 +93,7 @@ func addToBrothersList(srv map[string]Brother) {
 	}
 }
 
-func LoadAverage(hub *Hub.Hub, p *Params) {
+func LoadAverage(h *hub.Hub, p *Params) {
 	ticker := time.NewTicker(statsTimer)
 	MachineLoad = &load.AvgStat{0, 0, 0}
 	nbcpu, _ := cpu.Counts(true)
@@ -124,14 +124,14 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 				LAVG:     loadIndice,
 				MEM:      getMemUsage(),
 				SWAP:     getSwapUsage(),
-				NBMESS:   hub.SentMessByTicks,
-				NBI:      len(hub.Incomming),
+				NBMESS:   h.SentMessByTicks,
+				NBI:      len(h.Incomming),
 				MXI:      p.MaxIncommingConns,
-				NBU:      len(hub.Users),
+				NBU:      len(h.Users),
 				MXU:      p.MaxUsersConns,
-				NBM:      len(hub.Monitors),
+				NBM:      len(h.Monitors),
 				MXM:      p.MaxMonitorsConns,
-				NBS:      len(hub.Servers),
+				NBS:      len(h.Servers),
 				MXS:      p.MaxServersConns,
 				BRTHLST:  brotherlist,
 			}
@@ -145,14 +145,14 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 			if err != nil {
 				clog.Error("Monitoring", "LoadAverage", "MON: Cannot send server metrics to listeners ...")
 			} else {
-				if len(hub.Monitors)+len(hub.Servers) > 0 {
-					hub.SentMessByTicks = 0
-					mess := Hub.NewMessage(Hub.ClientMonitor, nil, json)
-					hub.Broadcast <- mess
-					mess = Hub.NewMessage(Hub.ClientServer, nil, append([]byte("MON|"), json...))
-					hub.Broadcast <- mess
-					mess = Hub.NewMessage(Hub.ClientUser, nil, append([]byte("FLLBCKSRV|"), brth_json...))
-					hub.Broadcast <- mess
+				if len(h.Monitors)+len(h.Servers) > 0 {
+					h.SentMessByTicks = 0
+					mess := hub.NewMessage(hub.ClientMonitor, nil, json)
+					h.Broadcast <- mess
+					mess = hub.NewMessage(hub.ClientServer, nil, append([]byte("MON|"), json...))
+					h.Broadcast <- mess
+					mess = hub.NewMessage(hub.ClientUser, nil, append([]byte("FLLBCKSRV|"), brth_json...))
+					h.Broadcast <- mess
 				}
 			}
 		}
@@ -162,7 +162,7 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 	}()
 }
 
-func Start(hub *Hub.Hub, p *Params) {
+func Start(hub *hub.Hub, p *Params) {
 	// addToBrothersList(list)
 	LoadAverage(hub, p)
 }

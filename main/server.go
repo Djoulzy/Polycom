@@ -1,25 +1,24 @@
 package main
 
 import (
-	"Polycom/Hub"
-
 	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/nettools/httpserver"
 	"github.com/Djoulzy/Polycom/nettools/scaling"
+	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 	"github.com/Djoulzy/Polycom/storage"
 	"github.com/Djoulzy/Polycom/urlcrypt"
 
 	"github.com/Djoulzy/Polycom/config"
 	"github.com/Djoulzy/Polycom/monitoring"
-	"github.com/Djoulzy/Polycom/nettools/httpserver"
-	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 )
 
 var conf *Config.Data
 
 var cryptor *urlcrypt.Cypher
 
-var HTTPManager HTTPServer.Manager
-var TCPManager TCPServer.Manager
+var HTTPManager httpserver.Manager
+var TCPManager tcpserver.Manager
 var scaleList *scaling.ServersList
 var Storage *storage.Driver
 
@@ -35,8 +34,8 @@ func main() {
 		HEX_IV:    []byte(conf.HEX_IV),
 	}
 
-	hub := Hub.NewHub()
-	go hub.Run()
+	h := hub.NewHub()
+	go h.Run()
 
 	Storage = storage.Init()
 
@@ -49,12 +48,12 @@ func main() {
 		MaxServersConns:   conf.MaxServersConns,
 		MaxIncommingConns: conf.MaxIncommingConns,
 	}
-	go monitoring.Start(hub, mon_params)
+	go monitoring.Start(h, mon_params)
 
-	tcp_params := &TCPServer.Manager{
+	tcp_params := &tcpserver.Manager{
 		ServerName:               conf.Name,
 		Tcpaddr:                  conf.TCPaddr,
-		Hub:                      hub,
+		Hub:                      h,
 		ConnectTimeOut:           conf.ConnectTimeOut,
 		WriteTimeOut:             conf.WriteTimeOut,
 		ScalingCheckServerPeriod: conf.ScalingCheckServerPeriod,
@@ -65,10 +64,10 @@ func main() {
 	go scaleList.Start()
 	// go scaling.Start(ScalingServers)
 
-	http_params := &HTTPServer.Manager{
+	http_params := &httpserver.Manager{
 		ServerName:       conf.Name,
 		Httpaddr:         conf.HTTPaddr,
-		Hub:              hub,
+		Hub:              h,
 		ReadBufferSize:   conf.ReadBufferSize,
 		WriteBufferSize:  conf.WriteBufferSize,
 		HandshakeTimeout: conf.HandshakeTimeout,
