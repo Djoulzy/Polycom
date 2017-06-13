@@ -140,7 +140,6 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 				BRTHLST: brotherlist,
 			}
 
-			// clog.Test("monitoring", "addToBrothersList", "Brother List: %s", brotherlist)
 			brth_json, _ := json.Marshal(newBrthList)
 			json, err := json.Marshal(newStats)
 			if err != nil {
@@ -148,7 +147,6 @@ func LoadAverage(hub *Hub.Hub, p *Params) {
 			} else {
 				if len(hub.Monitors)+len(hub.Servers) > 0 {
 					hub.SentMessByTicks = 0
-					// clog.Trace("Monitoring", "LoadAverage", "%s", json)
 					mess := Hub.NewMessage(Hub.ClientMonitor, nil, json)
 					hub.Broadcast <- mess
 					mess = Hub.NewMessage(Hub.ClientServer, nil, append([]byte("MON|"), json...))

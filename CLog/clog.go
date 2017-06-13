@@ -112,7 +112,12 @@ func Printf(fgcolor string, bgcolor string, format string, vars ...interface{}) 
 	log.Printf(tmp, vars...)
 }
 
-func Output(etype errorsColors, pack string, function string, str string, vars ...interface{}) {
+func Output(str string, vars ...interface{}) {
+	before := fmt.Sprintf("%s", str)
+	Printf(INFO.fg, INFO.bg, before, vars...)
+}
+
+func logOutput(etype errorsColors, pack string, function string, str string, vars ...interface{}) {
 	if LogLevel < etype.level || StartLogging == false {
 		return
 	}
@@ -121,30 +126,30 @@ func Output(etype errorsColors, pack string, function string, str string, vars .
 }
 
 func Warn(pack string, function string, str string, vars ...interface{}) {
-	Output(WARN, pack, function, str, vars...)
+	logOutput(WARN, pack, function, str, vars...)
 }
 
 func Info(pack string, function string, str string, vars ...interface{}) {
-	Output(INFO, pack, function, str, vars...)
+	logOutput(INFO, pack, function, str, vars...)
 }
 
 func Debug(pack string, function string, str string, vars ...interface{}) {
-	Output(DEBUG, pack, function, str, vars...)
+	logOutput(DEBUG, pack, function, str, vars...)
 }
 
 func Test(pack string, function string, str string, vars ...interface{}) {
-	Output(TEST, pack, function, str, vars...)
+	logOutput(TEST, pack, function, str, vars...)
 }
 
 func Error(pack string, function string, str string, vars ...interface{}) {
-	Output(ERROR, pack, function, str, vars...)
+	logOutput(ERROR, pack, function, str, vars...)
 }
 
 func Fatal(pack string, function string, err error) {
-	Output(ERROR, pack, function, "%s", err)
+	logOutput(ERROR, pack, function, "%s", err)
 	log.Fatal(err)
 }
 
 func Trace(pack string, function string, str string, vars ...interface{}) {
-	Output(TRACE, pack, function, str, vars...)
+	logOutput(TRACE, pack, function, str, vars...)
 }
