@@ -94,7 +94,7 @@ func CallToActionHTTP(c *hub.Client, message []byte) {
 	}
 }
 
-func HandShakeTCP(c *hub.Client, cmd []string) {
+func HandShakeTCP(c *hub.Client, cmd []byte) {
 	var ctype int
 
 	name := cmd[1]
@@ -131,35 +131,32 @@ func HandShakeTCP(c *hub.Client, cmd []string) {
 }
 
 func CallToActionTCP(c *hub.Client, message []byte) {
-	cmd_group := strings.Split(string(message), "|")
-	if len(cmd_group) < 2 {
+	cmd_group := string(message[0:6])
+	action_group := message[6:]
+	switch cmd_group {
+	case "[HELO]":
+		HandShakeTCP(c, action_group)
+	case "[CMMD]":
+		if c.CType != hub.ClientUndefined {
+			switch string(action_group) {
+			case "quit":
+				clog.Info("server", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
+				c.Hub.Unregister <- c
+				<-c.Consistent
+			default:
+				clog.Warn("server", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
+				mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))
+				c.Hub.Unicast <- mess
+			}
+		} else {
+			mess := hub.NewMessage(c.CType, c, []byte("HELLO|?"))
+			c.Hub.Unicast <- mess
+		}
+	case "[MNTR]":
+		clog.Warn("server", "CallToActionTCP", "Wrong TCPManager: %s", cmd_group[0])
+	default:
 		clog.Warn("server", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
 		c.Hub.Unregister <- c
 		<-c.Consistent
-	} else {
-		switch cmd_group[0] {
-		case "HELLO":
-			HandShakeTCP(c, cmd_group)
-		case "CMD":
-			if c.CType != hub.ClientUndefined {
-				switch cmd_group[1] {
-				case "quit":
-					clog.Info("server", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
-					c.Hub.Unregister <- c
-					<-c.Consistent
-				default:
-					clog.Warn("server", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
-					mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))
-					c.Hub.Unicast <- mess
-				}
-			} else {
-				mess := hub.NewMessage(c.CType, c, []byte("HELLO|?"))
-				c.Hub.Unicast <- mess
-			}
-		case "MON":
-			clog.Warn("server", "CallToActionTCP", "Wrong TCPManager: %s", cmd_group[0])
-		default:
-			clog.Warn("server", "CallToActionTCP", "Unknown Command: %s", cmd_group[0])
-		}
 	}
 }
