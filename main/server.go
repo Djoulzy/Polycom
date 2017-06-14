@@ -19,7 +19,7 @@ var Cryptor *urlcrypt.Cypher
 
 var HTTPManager httpserver.Manager
 var TCPManager tcpserver.Manager
-var scaleList *scaling.ServersList
+var ScaleList *scaling.ServersList
 var Storage *storage.Driver
 
 func main() {
@@ -58,10 +58,12 @@ func main() {
 		WriteTimeOut:             conf.WriteTimeOut,
 		ScalingCheckServerPeriod: conf.ScalingCheckServerPeriod,
 		MaxServersConns:          conf.MaxServersConns,
+		CallToAction:             CallToAction,
+		Cryptor:                  Cryptor,
 	}
 
-	scaleList = scaling.Init(tcp_params, &conf.KnownBrothers.Servers)
-	go scaleList.Start()
+	ScaleList = scaling.Init(tcp_params, &conf.KnownBrothers.Servers)
+	go ScaleList.Start()
 	// go scaling.Start(ScalingServers)
 
 	http_params := &httpserver.Manager{
@@ -71,11 +73,12 @@ func main() {
 		ReadBufferSize:   conf.ReadBufferSize,
 		WriteBufferSize:  conf.WriteBufferSize,
 		HandshakeTimeout: conf.HandshakeTimeout,
+		CallToAction:     CallToAction,
 		Cryptor:          Cryptor,
 	}
 	clog.Output("HTTP Server starting listening on %s", conf.HTTPaddr)
-	go HTTPManager.Start(http_params, CallToAction)
+	go HTTPManager.Start(http_params)
 
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
-	TCPManager.Start(tcp_params, CallToAction)
+	TCPManager.Start(tcp_params)
 }

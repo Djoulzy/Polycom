@@ -25,7 +25,7 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 	if h.UserExists(c.Name, hub.ClientUndefined) {
 		if len(h.Users) >= conf.MaxUsersConns && !h.UserExists(newName, hub.ClientUser) {
 			clog.Warn("server", "welcomeNewUser", "Too many Users connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(h.Incomming), len(h.Users))
-			if !scaleList.RedirectConnection(c) {
+			if !ScaleList.RedirectConnection(c) {
 				clog.Error("server", "welcomeNewUser", "NO FREE SLOTS !!!")
 			}
 			h.Unregister <- c
@@ -34,7 +34,7 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 			clog.Info("server", "welcomeNewUser", "Identifying %s as %s", c.Name, newName)
 			h.Newrole(&hub.ConnModifier{Client: c, NewName: newName, NewType: hub.ClientUser})
 			c.App_id = app_id
-			scaleList.DispatchNewConnection(h, c.Name)
+			ScaleList.DispatchNewConnection(h, c.Name)
 		}
 	} else {
 		clog.Warn("server", "welcomeNewUser", "Can't identify client... Disconnecting %s.", c.Name)
@@ -56,7 +56,7 @@ func welcomeNewServer(c *hub.Client, newName string, addr string) {
 		clog.Info("server", "welcomeNewServer", "Identifying %s as %s", c.Name, newName)
 		h.Newrole(&hub.ConnModifier{Client: c, NewName: newName, NewType: hub.ClientServer})
 		c.Addr = addr
-		scaleList.AddNewConnectedServer(c)
+		ScaleList.AddNewConnectedServer(c)
 	} else {
 		clog.Warn("server", "welcomeNewServer", "Can't identify server... Disconnecting %s.", c.Name)
 		h.Unregister <- c
@@ -107,6 +107,17 @@ func CallToAction(c *hub.Client, message []byte) {
 		case "[QUIT]":
 			h.Unregister <- c
 			<-c.Consistent
+		case "[MNIT]":
+			clog.Debug("server", "CallToAction", "Metrics received from %s (%s)", c.Name, c.Addr)
+			ScaleList.UpdateMetrics(c.Addr, action_group)
+		case "[KILL]":
+			id := string(action_group)
+			if h.UserExists(id, hub.ClientUser) {
+				userToKill := h.Users[id]
+				clog.Info("server", "CallToAction", "Killing user %s", action_group)
+				h.Unregister <- userToKill
+				<-userToKill.Consistent
+			}
 		default:
 			mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
 			h.Unicast <- mess
@@ -123,70 +134,3 @@ func CallToAction(c *hub.Client, message []byte) {
 		}
 	}
 }
-
-// func HandShakeTCP(c *hub.Client, cmd []byte) {
-// 	var ctype int
-//
-// 	name := cmd[1]
-// 	if len(cmd) > 2 {
-// 		ctype = hub.ClientServer
-// 		if len(c.Hub.Servers) >= conf.MaxServersConns {
-// 			clog.Warn("server", "HandShakeTCP", "Too many Server connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(c.Hub.Incomming), len(c.Hub.Servers))
-// 			c.Hub.Unregister <- c
-// 			<-c.Consistent
-// 			return
-// 		}
-// 	} else {
-// 		ctype = hub.ClientUser
-// 		if len(c.Hub.Users) >= conf.MaxUsersConns {
-// 			clog.Warn("server", "HandShakeTCP", "Too many Users connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(c.Hub.Incomming), len(c.Hub.Users))
-// 			c.Hub.Unregister <- c
-// 			<-c.Consistent
-// 			return
-// 		}
-// 	}
-//
-// 	if _, ok := c.Hub.Incomming[c.Name]; ok {
-// 		clog.Info("server", "HandShakeTCP", "Identifying %s as %s", c.Name, name)
-// 		c.Hub.Newrole(&hub.ConnModifier{Client: c, NewName: name, NewType: ctype})
-// 		if len(cmd) == 4 {
-// 			c.Addr = cmd[3]
-// 			scaleList.AddNewConnectedServer(c)
-// 		}
-// 	} else {
-// 		clog.Warn("server", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)
-// 		c.Hub.Unregister <- c
-// 		<-c.Consistent
-// 	}
-// }
-
-// func CallToActionTCP(c *hub.Client, message []byte) {
-// 	cmd_group := string(message[0:6])
-// 	action_group := message[6:]
-// 	switch cmd_group {
-// 	case "[HELO]":
-// 		HandShakeTCP(c, action_group)
-// 	case "[CMMD]":
-// 		if c.CType != hub.ClientUndefined {
-// 			switch string(action_group) {
-// 			case "quit":
-// 				clog.Info("server", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
-// 				c.Hub.Unregister <- c
-// 				<-c.Consistent
-// 			default:
-// 				clog.Warn("server", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
-// 				mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))
-// 				c.Hub.Unicast <- mess
-// 			}
-// 		} else {
-// 			mess := hub.NewMessage(c.CType, c, []byte("HELLO|?"))
-// 			c.Hub.Unicast <- mess
-// 		}
-// 	case "[MNTR]":
-// 		clog.Warn("server", "CallToActionTCP", "Wrong TCPManager: %s", cmd_group[0])
-// 	default:
-// 		clog.Warn("server", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
-// 		c.Hub.Unregister <- c
-// 		<-c.Consistent
-// 	}
-// }

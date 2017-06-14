@@ -173,8 +173,6 @@ func (h *Hub) unregister(client *Client) {
 			h.broadcast(mess)
 		}
 		clog.Info("Hub", "Unregister", "Client %s unregistered [%s] from %s.", client.Name, client.ID, CTYpeName[client.CType])
-	} else {
-		clog.Warn("Hub", "Unregister", "Trying to unregister unknown client : %s", client.Name)
 	}
 }
 

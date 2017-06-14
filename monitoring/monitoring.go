@@ -149,9 +149,9 @@ func LoadAverage(h *hub.Hub, p *Params) {
 					h.SentMessByTicks = 0
 					mess := hub.NewMessage(hub.ClientMonitor, nil, json)
 					h.Broadcast <- mess
-					mess = hub.NewMessage(hub.ClientServer, nil, append([]byte("MON|"), json...))
+					mess = hub.NewMessage(hub.ClientServer, nil, append([]byte("[MNIT]"), json...))
 					h.Broadcast <- mess
-					mess = hub.NewMessage(hub.ClientUser, nil, append([]byte("FLLBCKSRV|"), brth_json...))
+					mess = hub.NewMessage(hub.ClientUser, nil, append([]byte("[FLBK]"), brth_json...))
 					h.Broadcast <- mess
 				}
 			}

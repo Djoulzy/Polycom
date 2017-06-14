@@ -12,6 +12,7 @@ import (
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/urlcrypt"
 )
 
 var (
@@ -27,6 +28,8 @@ type Manager struct {
 	ConnectTimeOut           int
 	WriteTimeOut             int
 	ScalingCheckServerPeriod int
+	CallToAction             func(*hub.Client, []byte)
+	Cryptor                  *urlcrypt.Cypher
 }
 
 func (m *Manager) reader(c *hub.Client) {
@@ -50,7 +53,7 @@ func (m *Manager) reader(c *hub.Client) {
 		// }
 		// message = message[:long-1]
 		// spew.Dump(message)
-		go c.CallToAction(c, message)
+		go m.CallToAction(c, message)
 	}
 }
 
@@ -100,18 +103,18 @@ func (m *Manager) Connect() (*net.TCPConn, error) {
 	return conn.(*net.TCPConn), err
 }
 
-func (m *Manager) newClient(conn *net.TCPConn, name string, cta hub.CallToAction) *hub.Client {
+func (m *Manager) newClient(conn *net.TCPConn, name string) *hub.Client {
 	client := &hub.Client{Hub: m.Hub, Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: conn.RemoteAddr().String(),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: conn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket"}
 	m.Hub.Register <- client
 	<-client.Consistent
 	return client
 }
 
-func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, cta hub.CallToAction, wg *sync.WaitGroup) {
+func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, wg *sync.WaitGroup) {
 	clog.Debug("TCPserver", "NewOutgoingConn", "Contacting %s", conn.RemoteAddr().String())
-	client := m.newClient(conn, toName, cta)
+	client := m.newClient(conn, toName)
 	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", fromName, fromAddr)))
 	m.Hub.Unicast <- mess
 
@@ -122,8 +125,8 @@ func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName str
 	<-client.Consistent
 }
 
-func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta hub.CallToAction, wg *sync.WaitGroup) {
-	client := m.newClient(conn, conn.RemoteAddr().String(), cta)
+func (m *Manager) NewIncommingConn(conn *net.TCPConn, wg *sync.WaitGroup) {
+	client := m.newClient(conn, conn.RemoteAddr().String())
 	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", m.ServerName, m.Tcpaddr)))
 	m.Hub.Unicast <- mess
 
@@ -134,7 +137,7 @@ func (m *Manager) NewIncommingConn(conn *net.TCPConn, cta hub.CallToAction, wg *
 	<-client.Consistent
 }
 
-func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
+func (m *Manager) Start(conf *Manager) {
 	var wg sync.WaitGroup
 
 	m = conf
@@ -151,7 +154,7 @@ func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
 			// handle error
 		}
 		wg.Add(1)
-		go m.NewIncommingConn(conn, cta, &wg)
+		go m.NewIncommingConn(conn, &wg)
 		wg.Wait()
 	}
 }

@@ -43,16 +43,16 @@ func TestAddNewConnectedServer(t *testing.T) {
 	assert.Equal(t, "test1", slist.nodes[regSrv.Addr].manager.ServerName, "Server miss registered")
 }
 
-func TestCallToActionTCP(t *testing.T) {
-	regSrv := slist.nodes["10.31.100.200:8081"].hubclient
-	mess := "HELLO|VM|LISTN|10.31.100.200:8081"
-	slist.CallToActionTCP(regSrv, []byte(mess))
-}
+// func TestCallToActionTCP(t *testing.T) {
+// 	regSrv := slist.nodes["10.31.100.200:8081"].hubclient
+// 	mess := "HELLO|VM|LISTN|10.31.100.200:8081"
+// 	slist.CallToActionTCP(regSrv, []byte(mess))
+// }
 
 func TestUpdateMetrics(t *testing.T) {
 	message := "{\"SID\":\"VM\",\"TCPADDR\":\"10.31.100.200:8081\",\"HTTPADDR\":\"10.31.100.200:8080\",\"HOST\":\"HTTP: 10.31.100.200:8080 - TCP: 10.31.100.200:8081\",\"CPU\":2,\"GORTNE\":8,\"STTME\":\"12/06/2017 11:45:18\",\"UPTME\":\"25.00085595s\",\"LSTUPDT\":\"12/06/2017 11:45:43\",\"LAVG\":5,\"MEM\":\"\u003cth\u003eMem\u003c/th\u003e\u003ctd class='memCell'\u003e3963 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e3653 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e6.8%\u003c/td\u003e\",\"SWAP\":\"\u003cth\u003eSwap\u003c/th\u003e\u003ctd class='memCell'\u003e1707 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e1707 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e0.0%\u003c/td\u003e\",\"NBMESS\":1,\"NBI\":0,\"MXI\":500,\"NBU\":0,\"MXU\":200,\"NBM\":0,\"MXM\":3,\"NBS\":1,\"MXS\":5,\"BRTHLST\":{\"iMac\":{\"Tcpaddr\":\"10.31.200.168:8081\",\"Httpaddr\":\"localhost:8080\"}}}"
 
-	slist.updateMetrics(slist.nodes["10.31.100.200:8081"], []byte(message))
+	slist.UpdateMetrics("10.31.100.200:8081", []byte(message))
 	assert.Equal(t, 7, len(slist.nodes), "Bad number of registred servers")
 	assert.Equal(t, "10.31.100.200:8080", slist.nodes["10.31.100.200:8081"].httpaddr, "Bad updated information")
 }
@@ -82,6 +82,8 @@ func TestMain(m *testing.M) {
 		WriteTimeOut:             1,
 		ScalingCheckServerPeriod: 5,
 		MaxServersConns:          5,
+		CallToAction:             nil,
+		Cryptor:                  nil,
 	}
 
 	srvList := make(map[string]string)

@@ -3,7 +3,6 @@ package scaling
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -32,8 +31,9 @@ type ServersList struct {
 	Hub             *hub.Hub
 }
 
-func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
-	h := serv.manager.Hub
+func (slist *ServersList) UpdateMetrics(addr string, message []byte) {
+	serv := slist.nodes[addr]
+	h := slist.Hub
 	if len(h.Monitors)+len(h.Servers) > 0 {
 		clog.Debug("Scaling", "updateMetrics", "Update Metrics for %s", serv.manager.Tcpaddr)
 
@@ -66,74 +66,74 @@ func (slist *ServersList) updateMetrics(serv *NearbyServer, message []byte) {
 	}
 }
 
-func (slist *ServersList) HandShakeTCP(c *hub.Client, cmd []string) {
-	var ctype int
+// func (slist *ServersList) HandShakeTCP(c *hub.Client, cmd []string) {
+// 	var ctype int
+//
+// 	name := cmd[1]
+// 	addr := cmd[3]
+// 	ctype = hub.ClientServer
+// 	if len(cmd) != 4 {
+// 		clog.Warn("Scaling", "HandShakeTCP", "Bad connect string from %s, disconnecting.", c.Name)
+// 		c.Hub.Unregister <- c
+// 		<-c.Consistent
+// 		return
+// 	}
+//
+// 	if _, ok := c.Hub.Incomming[c.Name]; ok {
+// 		clog.Info("Scaling", "HandShakeTCP", "Identifying %s as %s", c.Name, name)
+// 		c.Hub.Newrole(&hub.ConnModifier{Client: c, NewName: name, NewType: ctype})
+// 		c.Name = name
+// 		c.Addr = addr
+// 		slist.nodes[addr].hubclient = c
+//
+// 	} else {
+// 		clog.Warn("Scaling", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)
+// 		c.Hub.Unregister <- c
+// 		<-c.Consistent
+// 	}
+//
+// }
 
-	name := cmd[1]
-	addr := cmd[3]
-	ctype = hub.ClientServer
-	if len(cmd) != 4 {
-		clog.Warn("Scaling", "HandShakeTCP", "Bad connect string from %s, disconnecting.", c.Name)
-		c.Hub.Unregister <- c
-		<-c.Consistent
-		return
-	}
-
-	if _, ok := c.Hub.Incomming[c.Name]; ok {
-		clog.Info("Scaling", "HandShakeTCP", "Identifying %s as %s", c.Name, name)
-		c.Hub.Newrole(&hub.ConnModifier{Client: c, NewName: name, NewType: ctype})
-		c.Name = name
-		c.Addr = addr
-		slist.nodes[addr].hubclient = c
-
-	} else {
-		clog.Warn("Scaling", "HandShakeTCP", "Can't identify client... Disconnecting %s.", c.Name)
-		c.Hub.Unregister <- c
-		<-c.Consistent
-	}
-
-}
-
-func (slist *ServersList) CallToActionTCP(c *hub.Client, message []byte) {
-	cmd_group := strings.Split(string(message), "|")
-	if len(cmd_group) < 2 {
-		clog.Warn("Scaling", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
-		c.Hub.Unregister <- c
-		<-c.Consistent
-	} else {
-		switch cmd_group[0] {
-		case "HELLO":
-			slist.HandShakeTCP(c, cmd_group)
-		case "CMD":
-			if c.CType != hub.ClientUndefined {
-				switch cmd_group[1] {
-				case "QUIT":
-					clog.Info("Scaling", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
-					c.Hub.Unregister <- c
-					<-c.Consistent
-				case "KILLUSER":
-					if c.Hub.UserExists(cmd_group[2], hub.ClientUser) {
-						clog.Info("Scaling", "CallToActionTCP", "Killing user %s", cmd_group[2])
-						c.Hub.Unregister <- c.Hub.Users[cmd_group[2]]
-						<-c.Hub.Users[cmd_group[2]].Consistent
-					}
-				default:
-					clog.Warn("Scaling", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
-					mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))
-					c.Hub.Unicast <- mess
-				}
-			} else {
-				mess := hub.NewMessage(c.CType, c, []byte("HELLO:?"))
-				c.Hub.Unicast <- mess
-			}
-		case "MON":
-			clog.Debug("Scaling", "CallToActionTCP", "Metrics received from %s (%s)", c.Name, c.Addr)
-			slist.updateMetrics(slist.nodes[c.Addr], message[4:len(message)])
-		default:
-			clog.Warn("Scaling", "CallToActionTCP", "Unknown Command: %s", cmd_group[0])
-		}
-	}
-}
+// func (slist *ServersList) CallToActionTCP(c *hub.Client, message []byte) {
+// 	cmd_group := strings.Split(string(message), "|")
+// 	if len(cmd_group) < 2 {
+// 		clog.Warn("Scaling", "CallToActionTCP", "Bad Command '%s', disconnecting client %s.", cmd_group[0], c.Name)
+// 		c.Hub.Unregister <- c
+// 		<-c.Consistent
+// 	} else {
+// 		switch cmd_group[0] {
+// 		case "HELLO":
+// 			slist.HandShakeTCP(c, cmd_group)
+// 		case "CMD":
+// 			if c.CType != hub.ClientUndefined {
+// 				switch cmd_group[1] {
+// 				case "QUIT":
+// 					clog.Info("Scaling", "CallToActionTCP", "Client %s deconnected normaly.", c.Name)
+// 					c.Hub.Unregister <- c
+// 					<-c.Consistent
+// 				case "KILLUSER":
+// 					if c.Hub.UserExists(cmd_group[2], hub.ClientUser) {
+// 						clog.Info("Scaling", "CallToActionTCP", "Killing user %s", cmd_group[2])
+// 						c.Hub.Unregister <- c.Hub.Users[cmd_group[2]]
+// 						<-c.Hub.Users[cmd_group[2]].Consistent
+// 					}
+// 				default:
+// 					clog.Warn("Scaling", "CallToActionTCP", "Unknown param %s for command %s", cmd_group[0], cmd_group[1])
+// 					mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group[0])))
+// 					c.Hub.Unicast <- mess
+// 				}
+// 			} else {
+// 				mess := hub.NewMessage(c.CType, c, []byte("HELLO:?"))
+// 				c.Hub.Unicast <- mess
+// 			}
+// 		case "MON":
+// 			clog.Debug("Scaling", "CallToActionTCP", "Metrics received from %s (%s)", c.Name, c.Addr)
+// 			slist.UpdateMetrics(c.Addr, message[4:len(message)])
+// 		default:
+// 			clog.Warn("Scaling", "CallToActionTCP", "Unknown Command: %s", cmd_group[0])
+// 		}
+// 	}
+// }
 
 func (slist *ServersList) checkingNewServers() {
 	var wg sync.WaitGroup
@@ -145,7 +145,7 @@ func (slist *ServersList) checkingNewServers() {
 			if err == nil {
 				clog.Trace("Scaling", "checkingNewServers", "Trying new server -> %s (%s)", node.manager.ServerName, addr)
 				wg.Add(1)
-				go node.manager.NewOutgoingConn(conn, node.manager.ServerName, slist.localName, slist.localAddr, slist.CallToActionTCP, &wg)
+				go node.manager.NewOutgoingConn(conn, node.manager.ServerName, slist.localName, slist.localAddr, &wg)
 				wg.Wait()
 				node.connected = true
 			}
@@ -156,7 +156,6 @@ func (slist *ServersList) checkingNewServers() {
 func (slist *ServersList) AddNewConnectedServer(c *hub.Client) {
 	clog.Info("Scaling", "AddNewConnectedServer", "Commit of server %s to scaling procedure.", c.Name)
 
-	c.CallToAction = slist.CallToActionTCP
 	slist.nodes[c.Addr] = &NearbyServer{
 		manager: &tcpserver.Manager{
 			ServerName: c.Name,
@@ -205,7 +204,7 @@ func (slist *ServersList) RedirectConnection(client *hub.Client) bool {
 		if node.connected {
 			clog.Trace("Scaling", "RedirectConnection", "Server %s CPU: %d Slots: %d", node.hubclient.Name, node.cpuload, node.freeslots)
 			if node.cpuload < 80 && node.freeslots > 5 {
-				redirect := fmt.Sprintf("REDIRECT|%s", node.httpaddr)
+				redirect := fmt.Sprintf("[RDCT]%s", node.httpaddr)
 				client.Send <- []byte(redirect)
 				clog.Info("Scaling", "RedirectConnection", "Client redirect -> %s (%s)", node.hubclient.Name, node.httpaddr)
 				return true
@@ -218,7 +217,7 @@ func (slist *ServersList) RedirectConnection(client *hub.Client) bool {
 }
 
 func (slist *ServersList) DispatchNewConnection(h *hub.Hub, name string) {
-	message := []byte(fmt.Sprintf("CMD|KILLUSER|%s", name))
+	message := []byte(fmt.Sprintf("[KILL]%s", name))
 	mess := hub.NewMessage(hub.ClientServer, nil, message)
 	h.Broadcast <- mess
 }

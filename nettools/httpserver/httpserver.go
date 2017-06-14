@@ -36,6 +36,7 @@ type Manager struct {
 	ReadBufferSize   int
 	WriteBufferSize  int
 	HandshakeTimeout int
+	CallToAction     func(*hub.Client, []byte)
 	Cryptor          *urlcrypt.Cypher
 }
 
@@ -87,7 +88,7 @@ func (m *Manager) Reader(c *hub.Client) {
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
 		// mess := Hub.NewMessage(c.CType, c, message)
 		// c.Hub.Action <- mess
-		go c.CallToAction(c, message)
+		go m.CallToAction(c, message)
 	}
 }
 
@@ -179,7 +180,7 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveWs handles websocket requests from the peer.
-func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta hub.CallToAction) {
+func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 	httpconn, err := m.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		clog.Error("HTTPServer", "wsConnect", "%s", err)
@@ -200,7 +201,7 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta hub.Call
 	}
 
 	client := &hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: cta, Addr: httpconn.RemoteAddr().String(),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
 	m.Hub.Register <- client
 	<-client.Consistent
@@ -210,7 +211,7 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request, cta hub.Call
 	<-client.Consistent
 }
 
-func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
+func (m *Manager) Start(conf *Manager) {
 	m = conf
 	m.Upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -223,7 +224,7 @@ func (m *Manager) Start(conf *Manager, cta hub.CallToAction) {
 
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { m.wsConnect(w, r, cta) })
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { m.wsConnect(w, r) })
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
 	if err != nil {

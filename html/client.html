@@ -48,13 +48,13 @@ function Connection() {
         };
 
         ws.onmessage = function(evt) {
-			switch(evt.data.substr(0, 9))
+			switch(evt.data.substr(0, 6))
 			{
-				case "REDIRECT":
+				case "[RDCT]":
 					print("REDIRECT: " +  evt.data);
 					break;
-				case "FLLBCKSRV":
-					obj = JSON.parse(evt.data.substr(10));
+				case "[FLBK]":
+					obj = JSON.parse(evt.data.substr(6));
 					for (var k in obj.BRTHLST){
 					    if (obj.BRTHLST.hasOwnProperty(k))
 							 brothers.add(obj.BRTHLST[k].Httpaddr)
@@ -104,14 +104,14 @@ window.addEventListener("load", function(evt) {
 
     document.getElementById("bcast").onclick = function(evt) {
         if (conn == null) return false;
-        print("BCAST: " + bcast_input.value);
+        print(bcast_input.value);
         conn.send(bcast_input.value);
         return false;
     };
 
 	document.getElementById("cmmd").onclick = function(evt) {
         if (conn == null) return false;
-        print("CMMD: " + cmmd_input.value);
+        print(cmmd_input.value);
         conn.send(cmmd_input.value);
         return false;
     };
@@ -136,7 +136,7 @@ HandShake: <br/><input id="HandShake" type="text" value="[HELO]{{.HShake}}">
 Broadcast: <br/><input id="bcast_input" type="text" value='[BCST]Hello World !!'>
 <button id="bcast">Send</button>
 <p>
-Command: <br/><input id="cmmd_input" type="text" value='[CMMD]{"actions":[{"sqs":1497344948,"ad":1497345028,"sqi":"db644a036ee3599772afe0d0a11ad5ca","ai":648136,"fc":"IPH","a":"SS","air":"1","vid":"studio_iphone_1","cp":74,"cc":"fr","vmi":"ios_device_id","off":"0","vqa":"medium","ua":"TEST_JULES","ac":"spsa","ci":469124,"nt":"WWAN","vt":74,"dr":1497345029,"rr":"","ip":"10.31.200.168"}]}'>
+Command: <br/><input id="cmmd_input" type="text" value='[STOR]{"actions":[{"sqs":1497344948,"ad":1497345028,"sqi":"db644a036ee3599772afe0d0a11ad5ca","ai":648136,"fc":"IPH","a":"SS","air":"1","vid":"studio_iphone_1","cp":74,"cc":"fr","vmi":"ios_device_id","off":"0","vqa":"medium","ua":"TEST_JULES","ac":"spsa","ci":469124,"nt":"WWAN","vt":74,"dr":1497345029,"rr":"","ip":"10.31.200.168"}]}'>
 <button id="cmmd">Send</button>
 </form>
 </td><td valign="top" width="50%">
