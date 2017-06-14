@@ -40,7 +40,7 @@ func TestAddNewConnectedServer(t *testing.T) {
 	<-regSrv.Consistent
 
 	slist.AddNewConnectedServer(regSrv)
-	assert.Equal(t, "test1", slist.nodes[regSrv.Addr].manager.ServerName, "Server miss registered")
+	assert.Equal(t, "test1", slist.nodes[regSrv.Addr].distantName, "Server miss registered")
 }
 
 // func TestCallToActionTCP(t *testing.T) {
@@ -64,7 +64,7 @@ func TestRedirectConnection(t *testing.T) {
 
 	slist.RedirectConnection(tmpClient)
 	ret := <-tmpClient.Send
-	assert.Equal(t, "REDIRECT|10.31.100.200:8080", string(ret), "Bad redirection data")
+	assert.Equal(t, "[RDCT]10.31.100.200:8080", string(ret), "Bad redirection data")
 }
 
 func TestMain(m *testing.M) {
