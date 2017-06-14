@@ -15,7 +15,7 @@ import (
 
 var conf *Config.Data
 
-var cryptor *urlcrypt.Cypher
+var Cryptor *urlcrypt.Cypher
 
 var HTTPManager httpserver.Manager
 var TCPManager tcpserver.Manager
@@ -28,7 +28,7 @@ func main() {
 	clog.LogLevel = conf.LogLevel
 	clog.StartLogging = conf.StartLogging
 
-	cryptor = &urlcrypt.Cypher{
+	Cryptor = &urlcrypt.Cypher{
 		HASH_SIZE: conf.HASH_SIZE,
 		HEX_KEY:   []byte(conf.HEX_KEY),
 		HEX_IV:    []byte(conf.HEX_IV),
@@ -71,10 +71,11 @@ func main() {
 		ReadBufferSize:   conf.ReadBufferSize,
 		WriteBufferSize:  conf.WriteBufferSize,
 		HandshakeTimeout: conf.HandshakeTimeout,
+		Cryptor:          Cryptor,
 	}
 	clog.Output("HTTP Server starting listening on %s", conf.HTTPaddr)
-	go HTTPManager.Start(http_params, CallToActionHTTP)
+	go HTTPManager.Start(http_params, CallToAction)
 
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
-	TCPManager.Start(tcp_params, CallToActionTCP)
+	TCPManager.Start(tcp_params, CallToAction)
 }

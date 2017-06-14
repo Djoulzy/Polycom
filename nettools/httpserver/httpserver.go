@@ -13,6 +13,7 @@ import (
 	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
+	"github.com/Djoulzy/Polycom/urlcrypt"
 )
 
 const (
@@ -35,6 +36,7 @@ type Manager struct {
 	ReadBufferSize   int
 	WriteBufferSize  int
 	HandshakeTimeout int
+	Cryptor          *urlcrypt.Cypher
 }
 
 func (m *Manager) Connect() *websocket.Conn {
@@ -134,16 +136,19 @@ func (m *Manager) Writer(c *hub.Client) {
 }
 
 func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
+	handShake, _ := m.Cryptor.Encrypt_b64("MNTR|Monitoring|MNTR")
 	var data = struct {
-		Host  string
-		Nb    int
-		Users map[string]*hub.Client
-		Stats string
+		Host   string
+		Nb     int
+		Users  map[string]*hub.Client
+		Stats  string
+		HShake string
 	}{
 		m.Httpaddr,
 		len(m.Hub.Users),
 		m.Hub.Users,
 		monitoring.MachineLoad.String(),
+		string(handShake),
 	}
 
 	homeTempl, err := template.ParseFiles("../html/status.html")
@@ -155,10 +160,14 @@ func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
+	handShake, _ := m.Cryptor.Encrypt_b64("LOAD_1|TestPage|USER")
+
 	var data = struct {
-		Host string
+		Host   string
+		HShake string
 	}{
 		m.Httpaddr,
+		string(handShake),
 	}
 
 	homeTempl, err := template.ParseFiles("../html/client.html")

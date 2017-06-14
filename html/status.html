@@ -103,7 +103,7 @@ window.addEventListener("load", function(evt) {
         ws = new WebSocket ('ws://{{.Host}}/ws');
 
         ws.onopen = function(evt) {
-            name = "Status:General"
+            name = "[HELO]{{.HShake}}"
             ws.send(name);
         }
 

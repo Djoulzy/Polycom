@@ -76,8 +76,8 @@ func TryRedirect(c *Conn, addr string) {
 	wg.Add(1)
 	go connect(c.name, u)
 	wg.Wait()
-	connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|253907|WEB|wmsa_BR|BR|iPhone", c.name))
-	Clients[c.name].send <- []byte(connString)
+	connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|wmsa_BR|USER", c.name))
+	Clients[c.name].send <- append([]byte("[HELO]"), []byte(connString)...)
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -175,9 +175,9 @@ func main() {
 		wg.Wait()
 		duration := time.Second / 100
 		time.Sleep(duration)
-		connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|253907|WEB|wmsa_BR|BR|iPhone", i))
+		connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i))
 		clog.Debug("test_load", "main", "Connecting %s ...", connString)
-		Clients[i].send <- []byte(connString)
+		Clients[i].send <- append([]byte("[HELO]"), []byte(connString)...)
 	}
 
 	// duration := time.Second
@@ -196,7 +196,7 @@ func main() {
 		for index, client := range Clients {
 			connString := fmt.Sprintf("LOAD_%d", index)
 			if client.ws != nil {
-				client.send <- []byte(connString)
+				client.send <- append([]byte("[BCST]"), []byte(connString)...)
 				duration := time.Second / 10
 				time.Sleep(duration)
 			} else {
