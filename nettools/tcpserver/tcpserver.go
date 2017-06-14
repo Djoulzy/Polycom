@@ -115,7 +115,8 @@ func (m *Manager) newClient(conn *net.TCPConn, name string) *hub.Client {
 func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, wg *sync.WaitGroup) {
 	clog.Debug("TCPserver", "NewOutgoingConn", "Contacting %s", conn.RemoteAddr().String())
 	client := m.newClient(conn, toName)
-	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", fromName, fromAddr)))
+	handShake, _ := m.Cryptor.Encrypt_b64(fmt.Sprintf("%s|%s|SERV", fromName, fromAddr))
+	mess := hub.NewMessage(client.CType, client, append([]byte("[HELO]"), handShake...))
 	m.Hub.Unicast <- mess
 
 	go m.writer(client)
@@ -127,7 +128,8 @@ func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName str
 
 func (m *Manager) NewIncommingConn(conn *net.TCPConn, wg *sync.WaitGroup) {
 	client := m.newClient(conn, conn.RemoteAddr().String())
-	mess := hub.NewMessage(client.CType, client, []byte(fmt.Sprintf("HELLO|%s|LISTN|%s", m.ServerName, m.Tcpaddr)))
+	handShake, _ := m.Cryptor.Encrypt_b64(fmt.Sprintf("%s|%s|SERV", m.ServerName, m.Tcpaddr))
+	mess := hub.NewMessage(client.CType, client, append([]byte("[HELO]"), handShake...))
 	m.Hub.Unicast <- mess
 
 	go m.writer(client)
