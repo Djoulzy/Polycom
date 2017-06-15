@@ -74,11 +74,11 @@ func (slist *ServersList) checkingNewServers() {
 	// spew.Dump(slist)
 	for addr, node := range slist.nodes {
 		if node.hubclient == nil || node.hubclient.Hub == nil {
-			conn, err := slist.tcpmanager.Connect()
+			conn, err := slist.tcpmanager.Connect(addr)
 			if err == nil {
 				clog.Trace("Scaling", "checkingNewServers", "Trying new server -> %s (%s)", node.distantName, addr)
 				wg.Add(1)
-				go slist.tcpmanager.NewOutgoingConn(conn, node.distantName, slist.localName, slist.localAddr, &wg)
+				go slist.tcpmanager.NewOutgoingConn(conn, node.distantName, &wg)
 				wg.Wait()
 				node.connected = true
 			}
@@ -88,7 +88,6 @@ func (slist *ServersList) checkingNewServers() {
 
 func (slist *ServersList) AddNewConnectedServer(c *hub.Client) {
 	clog.Info("Scaling", "AddNewConnectedServer", "Commit of server %s to scaling procedure.", c.Name)
-
 	slist.nodes[c.Addr] = &NearbyServer{
 		// manager: &tcpserver.Manager{
 		// 	ServerName: c.Name,
@@ -103,6 +102,7 @@ func (slist *ServersList) AddNewConnectedServer(c *hub.Client) {
 }
 
 func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
+	clog.Info("Scaling", "AddNewPotentialServer", "New server : %s (%s)", name, addr)
 	if slist.nodes[addr] == nil {
 		if addr != slist.localAddr {
 			slist.nodes[addr] = &NearbyServer{

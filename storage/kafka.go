@@ -34,6 +34,7 @@ func Init() *Driver {
 	return d
 }
 
+// ./kafka-console-consumer.sh --zookeeper localhost:2181 --topic test_go
 func (d *Driver) NewRecord(json string) {
 	defer func() {
 		if err := d.Store.(sarama.AsyncProducer).Close(); err != nil {

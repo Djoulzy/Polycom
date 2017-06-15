@@ -92,12 +92,12 @@ func GetAddr(c *hub.Client) string {
 	return ip[0]
 }
 
-func (m *Manager) Connect() (*net.TCPConn, error) {
-	conn, err := net.DialTimeout("tcp", m.Tcpaddr, time.Second*time.Duration(m.ConnectTimeOut))
+func (m *Manager) Connect(addr string) (*net.TCPConn, error) {
+	conn, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(m.ConnectTimeOut))
 	// addr, _ := net.ResolveTCPAddr("tcp", m.Tcpaddr)
 	// conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		clog.Error("TCPserver", "Connect", "Can't connect to server %s", m.Tcpaddr)
+		clog.Error("TCPserver", "Connect", "Can't connect to server %s", addr)
 		return nil, err
 	}
 	return conn.(*net.TCPConn), err
@@ -112,10 +112,10 @@ func (m *Manager) newClient(conn *net.TCPConn, name string) *hub.Client {
 	return client
 }
 
-func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, fromName string, fromAddr string, wg *sync.WaitGroup) {
+func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, wg *sync.WaitGroup) {
 	clog.Debug("TCPserver", "NewOutgoingConn", "Contacting %s", conn.RemoteAddr().String())
 	client := m.newClient(conn, toName)
-	handShake, _ := m.Cryptor.Encrypt_b64(fmt.Sprintf("%s|%s|SERV", fromName, fromAddr))
+	handShake, _ := m.Cryptor.Encrypt_b64(fmt.Sprintf("%s|%s|SERV", m.ServerName, m.Tcpaddr))
 	mess := hub.NewMessage(client.CType, client, append([]byte("[HELO]"), handShake...))
 	m.Hub.Unicast <- mess
 
