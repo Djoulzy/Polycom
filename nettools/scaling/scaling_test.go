@@ -38,9 +38,10 @@ func TestAddNewConnectedServer(t *testing.T) {
 	regSrv := newClient("test1", hub.ClientUndefined)
 	tmpHub.Register <- regSrv
 	<-regSrv.Consistent
+	tmpHub.Newrole(&hub.ConnModifier{Client: regSrv, NewName: "test1", NewType: hub.ClientServer})
 
 	slist.AddNewConnectedServer(regSrv)
-	assert.Equal(t, "test1", slist.nodes[regSrv.Addr].distantName, "Server miss registered")
+	assert.Equal(t, "test1", slist.nodes[regSrv.Addr].distantName, "Server should be registered")
 }
 
 // func TestCallToActionTCP(t *testing.T) {
@@ -69,7 +70,7 @@ func TestRedirectConnection(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	clog.LogLevel = 5
-	clog.StartLogging = false
+	clog.StartLogging = true
 
 	tmpHub = hub.NewHub()
 	go tmpHub.Run()

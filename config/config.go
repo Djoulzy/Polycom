@@ -76,7 +76,10 @@ func Load() (*Data, error) {
 			MaxServersConns:   5,
 			MaxIncommingConns: 50,
 		},
-		ServersAddresses{},
+		ServersAddresses{
+			HTTPaddr: "localhost:8080",
+			TCPaddr:  "localhost:8081",
+		},
 		KnownBrothers{},
 		HTTPServerConfig{
 			ReadBufferSize:   4096,
@@ -95,16 +98,18 @@ func Load() (*Data, error) {
 		},
 	}
 
-	conf.HTTPaddr = *flag.String("httpaddr", "localhost:8080", "http service address")
-	conf.TCPaddr = *flag.String("tcpaddr", "localhost:8081", "tcp service address")
-	flag.Parse()
-
 	cfg, err := ini.Load(fmt.Sprintf("%s/etc/server.ini", os.Getenv("GOPATH")))
 	if err != nil {
 		clog.Error("server", "getConf", "Invalid conf file: %s", err)
 		return conf, err
 	}
 	err = cfg.MapTo(conf)
+
+	flag.StringVar(&conf.HTTPaddr, "httpaddr", conf.HTTPaddr, "HTTP service address")
+	flag.StringVar(&conf.TCPaddr, "tcpaddr", conf.TCPaddr, "TCP service address")
+	flag.BoolVar(&conf.StartLogging, "v", conf.StartLogging, "Verbose mode")
+	flag.IntVar(&conf.LogLevel, "loglevel", conf.LogLevel, "Verbosity level")
+	flag.Parse()
 
 	sec1, err := cfg.GetSection("KnownBrothers")
 	if err == nil {
