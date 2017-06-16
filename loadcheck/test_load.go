@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -100,9 +99,10 @@ func (c *Conn) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		cmd_group := strings.Split(string(message), "|")
-		if cmd_group[0] == "REDIRECT" {
-			go TryRedirect(c, cmd_group[1])
+		cmd_group := string(message[0:6])
+		action_group := message[6:]
+		if cmd_group == "[RDCT]" {
+			go TryRedirect(c, string(action_group))
 			break
 		}
 	}
@@ -169,7 +169,7 @@ func main() {
 
 	u := url.URL{Scheme: "ws", Host: *httpaddr, Path: "/ws"}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()

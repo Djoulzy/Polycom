@@ -142,7 +142,7 @@ func (slist *ServersList) RedirectConnection(client *hub.Client) bool {
 	for _, node := range slist.nodes {
 		if node.connected {
 			clog.Trace("Scaling", "RedirectConnection", "Server %s CPU: %d Slots: %d", node.hubclient.Name, node.cpuload, node.freeslots)
-			if node.cpuload < 80 && node.freeslots > 5 {
+			if node.cpuload < 80 && node.freeslots > 0 {
 				redirect := fmt.Sprintf("[RDCT]%s", node.httpaddr)
 				client.Send <- []byte(redirect)
 				clog.Info("Scaling", "RedirectConnection", "Client redirect -> %s (%s)", node.hubclient.Name, node.httpaddr)
