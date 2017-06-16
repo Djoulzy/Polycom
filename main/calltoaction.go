@@ -101,6 +101,8 @@ func CallToAction(c *hub.Client, message []byte) {
 		case "[BCST]":
 			mess := hub.NewMessage(hub.ClientUser, nil, action_group)
 			h.Broadcast <- mess
+			mess = hub.NewMessage(hub.ClientServer, nil, message)
+			h.Broadcast <- mess
 		case "[UCST]":
 		case "[STOR]":
 			Storage.NewRecord(string(action_group))

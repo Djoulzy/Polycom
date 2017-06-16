@@ -193,10 +193,7 @@ func (h *Hub) broadcast(message *Message) {
 		if client.Hub != nil {
 			select {
 			case client.Send <- message.Content:
-				// clog.Debug("Hub", "broadcast", "Broadcast %s Message : %s", CTYpeName[message.UserType], message.Content)
 				h.SentMessByTicks++
-				// default:
-				// 	h.unregister(client)
 			}
 		}
 	}
