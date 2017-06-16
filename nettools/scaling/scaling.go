@@ -54,14 +54,14 @@ func (slist *ServersList) UpdateMetrics(addr string, message []byte) {
 			slist.AddNewPotentialServer(name, infos.Tcpaddr)
 		}
 
-		if len(h.Monitors) > 0 {
-			newSrv := make(map[string]monitoring.Brother)
-			newSrv[metrics.SID] = monitoring.Brother{
-				Httpaddr: metrics.HTTPADDR,
-				Tcpaddr:  metrics.TCPADDR,
-			}
-			monitoring.AddBrother <- newSrv
+		newSrv := make(map[string]monitoring.Brother)
+		newSrv[metrics.SID] = monitoring.Brother{
+			Httpaddr: metrics.HTTPADDR,
+			Tcpaddr:  metrics.TCPADDR,
+		}
+		monitoring.AddBrother <- newSrv
 
+		if len(h.Monitors) > 0 {
 			mess := hub.NewMessage(hub.ClientMonitor, nil, message)
 			h.Broadcast <- mess
 		}
