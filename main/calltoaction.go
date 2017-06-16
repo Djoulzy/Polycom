@@ -118,6 +118,10 @@ func CallToAction(c *hub.Client, message []byte) {
 				h.Unregister <- userToKill
 				<-userToKill.Consistent
 			}
+		case "[GKEY]":
+			crypted, _ := Cryptor.Encrypt_b64(string(action_group))
+			mess := hub.NewMessage(c.CType, c, crypted)
+			h.Unicast <- mess
 		default:
 			mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
 			h.Unicast <- mess
