@@ -102,9 +102,9 @@ func (slist *ServersList) AddNewConnectedServer(c *hub.Client) {
 }
 
 func (slist *ServersList) AddNewPotentialServer(name string, addr string) {
-	clog.Info("Scaling", "AddNewPotentialServer", "New server : %s (%s)", name, addr)
 	if slist.nodes[addr] == nil {
 		if addr != slist.localAddr {
+			clog.Info("Scaling", "AddNewPotentialServer", "New server : %s (%s)", name, addr)
 			slist.nodes[addr] = &NearbyServer{
 				// manager: &tcpserver.Manager{
 				// 	ServerName: name,
