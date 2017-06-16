@@ -52,6 +52,7 @@ function Connection() {
 			{
 				case "[RDCT]":
 					print("REDIRECT: " +  evt.data);
+					reconnect(evt.data.substr(6))
 					break;
 				case "[FLBK]":
 					obj = JSON.parse(evt.data.substr(6));
