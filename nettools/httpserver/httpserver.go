@@ -115,7 +115,7 @@ func (m *Manager) Writer(c *hub.Client) {
 		case message, ok := <-c.Send:
 			if !ok {
 				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
-				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Disconnected")
+				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
 				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
 					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
 				}
@@ -131,6 +131,10 @@ func (m *Manager) Writer(c *hub.Client) {
 				return
 			}
 		case <-c.Quit:
+			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
+			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
+				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
+			}
 			return
 		}
 	}

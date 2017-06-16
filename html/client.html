@@ -33,10 +33,15 @@ function Connection() {
                     ws = null;
                     disconnect()
 					break;
+				case 1000:
+            		print("CLOSE By SERVER: " + evt.reason);
+					ws = null;
+                    disconnect()
+					break;
 				case 1006:
 				default:
-            		print("CLOSE By SERVER");
-					console.log(brothers);
+            		print("Lost Connection: " + evt.reason);
+					console.log(evt);
 					for (let item of brothers) {
 						reconnect(item)
 						if (conn.readyState == 0) {

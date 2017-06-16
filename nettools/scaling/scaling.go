@@ -157,6 +157,7 @@ func (slist *ServersList) RedirectConnection(client *hub.Client) bool {
 
 func (slist *ServersList) DispatchNewConnection(h *hub.Hub, name string) {
 	message := []byte(fmt.Sprintf("[KILL]%s", name))
+	clog.Test("", "", "%s", h.FullUsersList[hub.ClientServer])
 	mess := hub.NewMessage(hub.ClientServer, nil, message)
 	h.Broadcast <- mess
 }

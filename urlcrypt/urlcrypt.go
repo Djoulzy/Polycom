@@ -89,10 +89,6 @@ func (uc *Cypher) GetMD5Hash(text string) []byte {
 	hasher.Write([]byte(text))
 	md5 := hasher.Sum(nil)
 
-	// dst := make([]byte, hex.EncodedLen(len(md5)))
-	// hex.Encode(dst, md5)
-	// return dst
-
 	return md5
 }
 
@@ -147,7 +143,7 @@ func (uc *Cypher) Decrypt_b64(enc_text string) ([]byte, error) {
 	iv_b64 := strings.Replace(strings.Replace(encoded_str[0], "_", "/", -1), "-", "+", -1) + iv_pad
 	text_b64 := strings.Replace(strings.Replace(encoded_str[1], "_", "/", -1), "-", "+", -1) + text_pad
 
-	clog.Info("Crypt", "Decrypt_b64", "IV_B64: %s\nTXT_B64: %s", iv_b64, text_b64)
+	// clog.Info("Crypt", "Decrypt_b64", "IV_B64: %s\nTXT_B64: %s", iv_b64, text_b64)
 
 	key_bin := make([]byte, hex.DecodedLen(len(uc.HEX_KEY)))
 	hex.Decode(key_bin, uc.HEX_KEY)
@@ -172,38 +168,3 @@ func (uc *Cypher) Decrypt_b64(enc_text string) ([]byte, error) {
 
 	return text_unpadded, nil
 }
-
-// func main() {
-// 	clog.LogLevel = 5
-// 	clog.StartLogging = true
-
-// 	cr := &Cypher{
-// 		HASH_SIZE: 8,
-// 		HEX_KEY:   []byte("d87fbb277eefe245ee384b6098637513462f5151336f345778706b462f724473"),
-// 		HEX_IV:    []byte("046b51957f00c25929e8ccaad3bfe1a7"),
-// 	}
-
-// 	padder := "===="
-// 	for i := 0; i < 10; i++ {
-// 		clog.Test("", "", "%d: %s", i, padder[4-(i%4):])
-// 	}
-// 	clog.Test("", "", "%s", i, padder[0:-4])
-
-// 	// test_enc := encodeBase64([]byte(mess_clair))
-// 	// clog.Trace("", "", "STR: %s\nENC: %s", mess_clair, test_enc)
-// 	// clog.Trace("", "", "STR: %s\nENC: %s", test_enc, decodeBase64(test_enc))
-
-// 	// clog.Info("Crypt", "main", "IV: %s", GenIV_hex())
-
-// 	message := "BGtRlX8Awlkp6Myq07_hpw/nlX438-fCibh-cMPOWJNvEshS-AUdFd3875R0Y6kmn-20WGPvPf06MgtCxjhlAW2bNHJofd1_KtIWcey1EADNXlWjRK2eIx6JbA4J4fbDik"
-
-// 	clog.Info("Crypt", "main", "Src: %s", message)
-// 	str, _ := cr.Decrypt_b64(message)
-// 	clog.Info("Crypt", "main", "Dec: %s", str)
-
-// 	// str, _ = cr.Encrypt_b64("Go is expressive, concise, clean, and efficient. Its concurrency mechanisms make it easy to write programs that get the most out of multicore and networked machines, while its novel type system enables flexible and modular program construction.")
-// 	// clog.Info("Crypt", "main", "Enc: %s", str)
-
-// 	// str, _ = cr.Decrypt_b64(string(str))
-// 	// clog.Info("Crypt", "main", "Dec: %s", str)
-// }
