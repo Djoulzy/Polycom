@@ -6,6 +6,7 @@ import (
 
 	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,6 +53,10 @@ func TestAddNewConnectedServer(t *testing.T) {
 
 func TestUpdateMetrics(t *testing.T) {
 	message := "{\"SID\":\"VM\",\"TCPADDR\":\"10.31.100.200:8081\",\"HTTPADDR\":\"10.31.100.200:8080\",\"HOST\":\"HTTP: 10.31.100.200:8080 - TCP: 10.31.100.200:8081\",\"CPU\":2,\"GORTNE\":8,\"STTME\":\"12/06/2017 11:45:18\",\"UPTME\":\"25.00085595s\",\"LSTUPDT\":\"12/06/2017 11:45:43\",\"LAVG\":5,\"MEM\":\"\u003cth\u003eMem\u003c/th\u003e\u003ctd class='memCell'\u003e3963 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e3653 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e6.8%\u003c/td\u003e\",\"SWAP\":\"\u003cth\u003eSwap\u003c/th\u003e\u003ctd class='memCell'\u003e1707 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e1707 Mo\u003c/td\u003e\u003ctd class='memCell'\u003e0.0%\u003c/td\u003e\",\"NBMESS\":1,\"NBI\":0,\"MXI\":500,\"NBU\":0,\"MXU\":200,\"NBM\":0,\"MXM\":3,\"NBS\":1,\"MXS\":5,\"BRTHLST\":{\"iMac\":{\"Tcpaddr\":\"10.31.200.168:8081\",\"Httpaddr\":\"localhost:8080\"}}}"
+
+	go func() {
+		<-monitoring.AddBrother
+	}()
 
 	slist.UpdateMetrics("10.31.100.200:8081", []byte(message))
 	assert.Equal(t, 7, len(slist.nodes), "Bad number of registred servers")
