@@ -226,6 +226,9 @@ func (m *Manager) Start(conf *Manager) {
 		HandshakeTimeout: time.Duration(m.HandshakeTimeout) * time.Second,
 	} // use default options
 
+	fs := http.FileServer(http.Dir("../html/js"))
+	http.Handle("/js/", http.StripPrefix("/js/", fs))
+
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { m.wsConnect(w, r) })
