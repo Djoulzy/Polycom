@@ -52,11 +52,11 @@ function StatusGraph(name)
 			.attr("height", height);
 
 	g.append("g")
-		.attr("class", "axis y1")
+		.attr("class", "axis y1 "+name)
 		.call(yAxis1);
 
 	g.append("g")
-		.attr("class", "axis y2")
+		.attr("class", "axis y2 "+name)
 		.attr("transform", "translate(" + width + ",0)")
 		.call(yAxis2);
 
@@ -64,7 +64,7 @@ function StatusGraph(name)
 		.attr("clip-path", "url(#clip)")
 			.append("path")
 				.datum(data1)
-				.attr("class", "draw line1")
+				.attr("class", "draw line1 "+name)
 				.transition()
 				.duration(5000)
 				.ease(d3.easeLinear)
@@ -74,7 +74,7 @@ function StatusGraph(name)
 		.attr("clip-path", "url(#clip)")
 			.append("path")
 				.datum(data2)
-				.attr("class", "draw line2")
+				.attr("class", "draw line2 "+name)
 				.transition()
 				.duration(5000)
 				.ease(d3.easeLinear)
@@ -83,18 +83,18 @@ function StatusGraph(name)
 	function tick() {
 		// Push a new data point onto the back.
 		// console.log(newVal1, newVal2)
-		// console.log(svg)
+		// console.log(data1)
 		if (that.newVal1 > maxAxisY1) {
 			maxAxisY1 = that.newVal1 + 50
 			y1Scale.domain([0, maxAxisY1]);
-			g.select(".y1").call(yAxis1);
+			g.select(".y1."+name).call(yAxis1);
 		}
 
 		if (that.newVal2 > maxAxisY2) {
 			maxAxisY2 = that.newVal2 + 50
-			g.select(".y2").attr("transform", "translate(" + width + ",0)")
+			g.select(".y2."+name).attr("transform", "translate(" + width + ",0)")
 			y2Scale.domain([0, maxAxisY2]);
-			g.select(".y2").call(yAxis2);
+			g.select(".y2."+name).call(yAxis2);
 		}
 
 		data1.push(that.newVal1);
@@ -102,11 +102,11 @@ function StatusGraph(name)
 
 		// Redraw the line.
 		// d3.select(this)
-		d3.select(".line1")
+		d3.select(".line1."+name)
 			.attr("d", line1)
 			.attr("transform", null);
 
-		d3.select(".line2")
+		d3.select(".line2."+name)
 			.attr("d", line2)
 			.attr("transform", null);
 

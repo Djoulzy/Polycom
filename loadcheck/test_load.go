@@ -169,7 +169,7 @@ func main() {
 
 	u := url.URL{Scheme: "ws", Host: *httpaddr, Path: "/ws"}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 180; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()

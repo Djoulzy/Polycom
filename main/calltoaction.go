@@ -93,6 +93,14 @@ func HandShake(c *hub.Client, message []byte) {
 
 func CallToAction(c *hub.Client, message []byte) {
 	h := c.Hub
+	clog.Test("", "", "%s", message)
+	if len(message) < 6 {
+		clog.Warn("server", "CallToAction", "Bad Command '%s', disconnecting client %s.", message, c.Name)
+		h.Unregister <- c
+		<-c.Consistent
+		return
+	}
+
 	cmd_group := string(message[0:6])
 	action_group := message[6:]
 
