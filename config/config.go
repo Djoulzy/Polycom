@@ -98,18 +98,18 @@ func Load() (*Data, error) {
 		},
 	}
 
-	cfg, err := ini.Load(fmt.Sprintf("%s/etc/server.ini", os.Getenv("GOPATH")))
-	if err != nil {
-		clog.Error("server", "getConf", "Invalid conf file: %s", err)
-		return conf, err
-	}
-	err = cfg.MapTo(conf)
-
-	flag.StringVar(&conf.HTTPaddr, "httpaddr", conf.HTTPaddr, "HTTP service address")
-	flag.StringVar(&conf.TCPaddr, "tcpaddr", conf.TCPaddr, "TCP service address")
+	conf_file_path := flag.String("f", fmt.Sprintf("%setc/server.ini", os.Getenv("GOPATH")), "Config file location")
 	flag.BoolVar(&conf.StartLogging, "v", conf.StartLogging, "Verbose mode")
 	flag.IntVar(&conf.LogLevel, "loglevel", conf.LogLevel, "Verbosity level")
 	flag.Parse()
+
+	fmt.Println("%s", *conf_file_path)
+	cfg, err := ini.Load(*conf_file_path)
+	if err != nil {
+		clog.Fatal("server", "getConf", err)
+		return conf, err
+	}
+	err = cfg.MapTo(conf)
 
 	sec1, err := cfg.GetSection("KnownBrothers")
 	if err == nil {
