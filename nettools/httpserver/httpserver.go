@@ -221,6 +221,9 @@ func (m *Manager) Start(conf *Manager) {
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
+		Error: func(w http.ResponseWriter, r *http.Request, status int, reason error) {
+			clog.Error("httpserver", "Start", "Error %s", reason)
+		},
 		ReadBufferSize:   m.ReadBufferSize,
 		WriteBufferSize:  m.WriteBufferSize,
 		HandshakeTimeout: time.Duration(m.HandshakeTimeout) * time.Second,
