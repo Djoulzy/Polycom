@@ -72,11 +72,17 @@ var TRACE = errorsColors{
 var WARN = errorsColors{
 	name:  "WARN",
 	level: 2,
-	fg:    "light_red",
+	fg:    "yellow",
 	bg:    "black",
 }
 var ERROR = errorsColors{
 	name:  "ERRR",
+	level: 1,
+	fg:    "light_red",
+	bg:    "black",
+}
+var FATAL = errorsColors{
+	name:  "FATAL",
 	level: 1,
 	fg:    "white",
 	bg:    "red",
@@ -146,8 +152,8 @@ func Error(pack string, function string, str string, vars ...interface{}) {
 }
 
 func Fatal(pack string, function string, err error) {
-	logOutput(ERROR, pack, function, "%s", err)
-	log.Fatal(err)
+	logOutput(FATAL, pack, function, "%s", err)
+	log.Fatal()
 }
 
 func Trace(pack string, function string, str string, vars ...interface{}) {
