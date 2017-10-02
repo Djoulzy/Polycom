@@ -10,10 +10,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/urlcrypt"
+	"github.com/Djoulzy/Tools/clog"
 )
 
 const (

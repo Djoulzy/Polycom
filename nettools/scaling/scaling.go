@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/nettools/tcpserver"
+	"github.com/Djoulzy/Tools/clog"
 )
 
 var serverCheckPeriod = 10 * time.Second

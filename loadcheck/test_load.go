@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/urlcrypt"
+	"github.com/Djoulzy/Tools/clog"
 	"github.com/gorilla/websocket"
 )
 

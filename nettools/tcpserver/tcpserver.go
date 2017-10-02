@@ -10,9 +10,9 @@ import (
 	"time"
 
 	// "github.com/davecgh/go-spew/spew"
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/urlcrypt"
+	"github.com/Djoulzy/Tools/clog"
 )
 
 var (

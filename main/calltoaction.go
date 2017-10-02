@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Tools/clog"
 )
 
 func welcomeNewMonitor(c *hub.Client, newName string, app_id string) {

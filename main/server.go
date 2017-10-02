@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/Djoulzy/Polycom/clog"
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/nettools/httpserver"
 	"github.com/Djoulzy/Polycom/nettools/scaling"
@@ -9,11 +8,11 @@ import (
 	"github.com/Djoulzy/Polycom/storage"
 	"github.com/Djoulzy/Polycom/urlcrypt"
 
-	"github.com/Djoulzy/Polycom/config"
+	"github.com/Djoulzy/Tools/clog"
+	"github.com/Djoulzy/Tools/config"
+
 	"github.com/Djoulzy/Polycom/monitoring"
 )
-
-var conf *Config.Data
 
 var Cryptor *urlcrypt.Cypher
 
@@ -23,7 +22,7 @@ var ScaleList *scaling.ServersList
 var Storage *storage.Driver
 
 func main() {
-	conf, _ = Config.Load()
+	config.Load("server.ini", conf)
 
 	clog.LogLevel = conf.LogLevel
 	clog.StartLogging = conf.StartLogging

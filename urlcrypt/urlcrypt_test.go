@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Djoulzy/Polycom/clog"
+	"github.com/Djoulzy/Tools/clog"
 	"github.com/stretchr/testify/assert"
 )
 
