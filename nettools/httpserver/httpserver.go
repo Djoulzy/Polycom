@@ -41,105 +41,6 @@ type Manager struct {
 	Cryptor          *urlcrypt.Cypher
 }
 
-func (m *Manager) Connect() *websocket.Conn {
-	u := url.URL{Scheme: "ws", Host: m.Httpaddr, Path: "/ws"}
-	clog.Info("HTTPServer", "Connect", "Connecting to %s", u.String())
-
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		clog.Error("HTTPServer", "Connect", "%s", err)
-		return nil
-	}
-
-	return conn
-}
-
-// readPump pumps messages from the websocket connection to the hub.
-//
-// The application runs readPump in a per-connection goroutine. The application
-// ensures that there is at most one reader on a connection by executing all
-// reads from this goroutine.
-func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
-	// conn := c.(*websocket.Conn)
-	defer func() {
-		conn.Close()
-	}()
-
-	conn.SetReadLimit(maxMessageSize)
-	conn.SetReadDeadline(time.Now().Add(pongWait))
-	conn.SetPongHandler(func(string) error {
-		// c.ReadProtect.Lock()
-		conn.SetReadDeadline(time.Now().Add(pongWait))
-		// c.ReadProtect.Unlock()
-		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
-		return nil
-	})
-	for {
-		// c.ReadProtect.Lock()
-		// messType, message, err := conn.ReadMessage()
-		// c.ReadProtect.Unlock()
-		_, message, err := conn.ReadMessage()
-		// clog.Debug("HTTPServer", "Writer", "Read from Client %s [%s]: %s", c.Name, c.ID, message)
-		if err != nil {
-			// clog.Error("HTTPServer", "Writer", "Type: %d, error: %v", messType, err)
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-			}
-			break
-		}
-		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
-		// mess := Hub.NewMessage(c.CType, c, message)
-		// c.Hub.Action <- mess
-		go m.CallToAction(cli, message)
-	}
-}
-
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
-func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
-	ws.SetWriteDeadline(time.Now().Add(writeWait))
-	return ws.WriteMessage(mt, message)
-}
-
-func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-		conn.Close()
-	}()
-
-	for {
-		select {
-		case message, ok := <-cli.Send:
-			if !ok {
-				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
-				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
-				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
-				}
-				return
-			}
-			// clog.Debug("HTTPServer", "Writer", "Sending: %s", message)
-			if err := m._write(conn, websocket.TextMessage, message); err != nil {
-				return
-			}
-		case <-ticker.C:
-			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
-			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
-				return
-			}
-		case <-cli.Quit:
-			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
-			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
-			}
-			return
-		}
-	}
-}
-
 func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
 	handShake, _ := m.Cryptor.Encrypt_b64("MNTR|Monitoring|MNTR")
 	var data = struct {
@@ -183,12 +84,108 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 	homeTempl.Execute(w, &data)
 }
 
+func (m *Manager) Connect() *websocket.Conn {
+	u := url.URL{Scheme: "ws", Host: m.Httpaddr, Path: "/ws"}
+	clog.Info("HTTPServer", "Connect", "Connecting to %s", u.String())
+
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		clog.Error("HTTPServer", "Connect", "%s", err)
+		return nil
+	}
+
+	return conn
+}
+
+// readPump pumps messages from the websocket connection to the hub.
+//
+// The application runs readPump in a per-connection goroutine. The application
+// ensures that there is at most one reader on a connection by executing all
+// reads from this goroutine.
+func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
+	conn.SetReadLimit(maxMessageSize)
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error {
+		// c.ReadProtect.Lock()
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		// c.ReadProtect.Unlock()
+		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
+		return nil
+	})
+	for {
+		// c.ReadProtect.Lock()
+		// messType, message, err := conn.ReadMessage()
+		// c.ReadProtect.Unlock()
+		if conn == nil {
+			return
+		}
+		_, message, err := conn.ReadMessage()
+		// clog.Debug("HTTPServer", "Writer", "Read from Client %s [%s]: %s", c.Name, c.ID, message)
+		if err != nil {
+			// clog.Error("HTTPServer", "Writer", "Type: %d, error: %v", messType, err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			}
+			break
+		}
+		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
+		// mess := Hub.NewMessage(c.CType, c, message)
+		// c.Hub.Action <- mess
+		go m.CallToAction(cli, message)
+	}
+}
+
+// writePump pumps messages from the hub to the websocket connection.
+//
+// A goroutine running writePump is started for each connection. The
+// application ensures that there is at most one writer to a connection by
+// executing all writes from this goroutine.
+func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
+	ws.SetWriteDeadline(time.Now().Add(writeWait))
+	return ws.WriteMessage(mt, message)
+}
+
+func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+	}()
+
+	for {
+		select {
+		case message, ok := <-cli.Send:
+			if !ok {
+				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
+				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
+				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
+					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
+				}
+				return
+			}
+			// clog.Debug("HTTPServer", "Writer", "Sending: %s", message)
+			if err := m._write(conn, websocket.TextMessage, message); err != nil {
+				return
+			}
+		case <-ticker.C:
+			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
+			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
+				return
+			}
+		case <-cli.Quit:
+			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
+			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
+				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
+			}
+			return
+		}
+	}
+}
+
 // serveWs handles websocket requests from the peer.
 func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
-
-	name := headers["Sec-Websocket-Key"][0]
+	defer c.Close()
 
 	var ua string
+	name := headers["Sec-Websocket-Key"][0]
 	if len(headers["User-Agent"]) > 0 {
 		ua = headers["User-Agent"][0]
 	} else {
@@ -208,6 +205,7 @@ func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
 	<-client.Consistent
 	go m.Writer(c, client)
 	m.Reader(c, client)
+	clog.Trace("END", "END", "END")
 	m.Hub.Unregister <- client
 	<-client.Consistent
 }

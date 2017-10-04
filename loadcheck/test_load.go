@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"log"
 	"net/url"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Djoulzy/Polycom/urlcrypt"
 	"github.com/Djoulzy/Tools/clog"
+	"github.com/Djoulzy/Tools/config"
 	"github.com/gorilla/websocket"
 )
 
@@ -42,14 +42,8 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 10240,
 }
 
-var cryptor = &urlcrypt.Cypher{
-	HASH_SIZE: 8,
-	HEX_KEY:   []byte("d87fbb277eefe245ee384b6098637513462f5151336f345778706b462f724473"),
-	HEX_IV:    []byte("046b51957f00c25929e8ccaad3bfe1a7"),
-}
+var cryptor *urlcrypt.Cypher
 
-var httpaddr = flag.String("httpaddr", "localhost:8080", "http service address")
-var tcpaddr = flag.String("tcpaddr", "localhost:8081", "tcp service address")
 var mu sync.Mutex
 var wu sync.Mutex
 var wg sync.WaitGroup
@@ -162,19 +156,25 @@ func connect(i int, u url.URL) {
 }
 
 func main() {
-	flag.Parse()
+	config.Load("server.ini", conf)
 
 	clog.LogLevel = 5
 	clog.StartLogging = true
 
-	u := url.URL{Scheme: "ws", Host: *httpaddr, Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: conf.HTTPaddr, Path: "/ws"}
+
+	cryptor = &urlcrypt.Cypher{
+		HASH_SIZE: conf.HASH_SIZE,
+		HEX_KEY:   []byte(conf.HEX_KEY),
+		HEX_IV:    []byte(conf.HEX_IV),
+	}
 
 	for i := 0; i < 2000; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()
-		// duration := time.Second / 100
-		// time.Sleep(duration)
+		duration := time.Second / 100
+		time.Sleep(duration)
 		connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i))
 		clog.Debug("test_load", "main", "Connecting %s ...", connString)
 		Clients[i].send <- append([]byte("[HELO]"), []byte(connString)...)
