@@ -28,10 +28,11 @@ var (
 	Space   = []byte{' '}
 )
 
+var Upgrader *websocket.Upgrader
+
 type Manager struct {
 	Httpaddr         string
 	ServerName       string
-	Upgrader         websocket.Upgrader
 	Hub              *hub.Hub
 	ReadBufferSize   int
 	WriteBufferSize  int
@@ -58,19 +59,19 @@ func (m *Manager) Connect() *websocket.Conn {
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (m *Manager) Reader(c *hub.Client) {
+func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
+	// conn := c.(*websocket.Conn)
 	defer func() {
-		c.Conn.(*websocket.Conn).Close()
+		conn.Close()
 	}()
 
-	conn := c.Conn.(*websocket.Conn)
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		// c.ReadProtect.Lock()
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		// c.ReadProtect.Unlock()
-		clog.Debug("HTTPServer", "Reader", "PONG! from %s", c.Name)
+		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
 		return nil
 	})
 	for {
@@ -88,7 +89,7 @@ func (m *Manager) Reader(c *hub.Client) {
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
 		// mess := Hub.NewMessage(c.CType, c, message)
 		// c.Hub.Action <- mess
-		go m.CallToAction(c, message)
+		go m.CallToAction(cli, message)
 	}
 }
 
@@ -102,22 +103,21 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 	return ws.WriteMessage(mt, message)
 }
 
-func (m *Manager) Writer(c *hub.Client) {
+func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.Conn.(*websocket.Conn).Close()
+		conn.Close()
 	}()
 
-	conn := c.Conn.(*websocket.Conn)
 	for {
 		select {
-		case message, ok := <-c.Send:
+		case message, ok := <-cli.Send:
 			if !ok {
 				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
 				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
 				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
+					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
 				}
 				return
 			}
@@ -126,14 +126,14 @@ func (m *Manager) Writer(c *hub.Client) {
 				return
 			}
 		case <-ticker.C:
-			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", c.Name)
+			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
 			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
-		case <-c.Quit:
+		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
 			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
+				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
 			}
 			return
 		}
@@ -184,17 +184,13 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveWs handles websocket requests from the peer.
-func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
-	httpconn, err := m.Upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		clog.Error("HTTPServer", "wsConnect", "%s", err)
-		return
-	}
-	name := r.Header["Sec-Websocket-Key"][0]
+func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
+
+	name := headers["Sec-Websocket-Key"][0]
 
 	var ua string
-	if len(r.Header["User-Agent"]) > 0 {
-		ua = r.Header["User-Agent"][0]
+	if len(headers["User-Agent"]) > 0 {
+		ua = headers["User-Agent"][0]
 	} else {
 		ua = "n/a"
 	}
@@ -204,20 +200,32 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
+	client := &hub.Client{Consistent: make(chan bool), Quit: make(chan bool),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: c.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
+
 	m.Hub.Register <- client
 	<-client.Consistent
-	go m.Writer(client)
-	m.Reader(client)
+	go m.Writer(c, client)
+	m.Reader(c, client)
 	m.Hub.Unregister <- client
 	<-client.Consistent
 }
 
+// serveWs handles websocket requests from the peer.
+func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
+	headers := r.Header
+	httpconn, err := Upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		clog.Error("HTTPServer", "wsConnect", "%s", err)
+		return
+	}
+	go m.WSHandler(httpconn, headers)
+}
+
 func (m *Manager) Start(conf *Manager) {
 	m = conf
-	m.Upgrader = websocket.Upgrader{
+	Upgrader = &websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},

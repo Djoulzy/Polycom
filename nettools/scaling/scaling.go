@@ -3,7 +3,6 @@ package scaling
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
@@ -69,21 +68,21 @@ func (slist *ServersList) UpdateMetrics(addr string, message []byte) {
 }
 
 func (slist *ServersList) checkingNewServers() {
-	var wg sync.WaitGroup
+	// var wg sync.WaitGroup
 
 	// spew.Dump(slist)
-	for addr, node := range slist.nodes {
-		if node.hubclient == nil || node.hubclient.Hub == nil {
-			conn, err := slist.tcpmanager.Connect(addr)
-			if err == nil {
-				clog.Trace("Scaling", "checkingNewServers", "Trying new server -> %s (%s)", node.distantName, addr)
-				wg.Add(1)
-				go slist.tcpmanager.NewOutgoingConn(conn, node.distantName, &wg)
-				wg.Wait()
-				node.connected = true
-			}
-		}
-	}
+	// for addr, node := range slist.nodes {
+	// 	if node.hubclient == nil || node.hubclient.Hub == nil {
+	// 		conn, err := slist.tcpmanager.Connect(addr)
+	// 		if err == nil {
+	// 			clog.Trace("Scaling", "checkingNewServers", "Trying new server -> %s (%s)", node.distantName, addr)
+	// 			wg.Add(1)
+	// 			go slist.tcpmanager.NewOutgoingConn(conn, node.distantName, &wg)
+	// 			wg.Wait()
+	// 			node.connected = true
+	// 		}
+	// 	}
+	// }
 }
 
 func (slist *ServersList) AddNewConnectedServer(c *hub.Client) {

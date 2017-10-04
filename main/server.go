@@ -21,6 +21,8 @@ var TCPManager tcpserver.Manager
 var ScaleList *scaling.ServersList
 var Storage *storage.Driver
 
+var zeHub *hub.Hub
+
 func main() {
 	config.Load("server.ini", conf)
 
@@ -33,8 +35,7 @@ func main() {
 		HEX_IV:    []byte(conf.HEX_IV),
 	}
 
-	h := hub.NewHub()
-	go h.Run()
+	zeHub = hub.NewHub()
 
 	Storage = storage.Init()
 
@@ -47,12 +48,12 @@ func main() {
 		MaxServersConns:   conf.MaxServersConns,
 		MaxIncommingConns: conf.MaxIncommingConns,
 	}
-	go monitoring.Start(h, mon_params)
+	go monitoring.Start(zeHub, mon_params)
 
 	tcp_params := &tcpserver.Manager{
 		ServerName:               conf.Name,
 		Tcpaddr:                  conf.TCPaddr,
-		Hub:                      h,
+		Hub:                      zeHub,
 		ConnectTimeOut:           conf.ConnectTimeOut,
 		WriteTimeOut:             conf.WriteTimeOut,
 		ScalingCheckServerPeriod: conf.ScalingCheckServerPeriod,
@@ -68,7 +69,7 @@ func main() {
 	http_params := &httpserver.Manager{
 		ServerName:       conf.Name,
 		Httpaddr:         conf.HTTPaddr,
-		Hub:              h,
+		Hub:              zeHub,
 		ReadBufferSize:   conf.ReadBufferSize,
 		WriteBufferSize:  conf.WriteBufferSize,
 		HandshakeTimeout: conf.HandshakeTimeout,
@@ -79,5 +80,7 @@ func main() {
 	go HTTPManager.Start(http_params)
 
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
-	TCPManager.Start(tcp_params)
+	go TCPManager.Start(tcp_params)
+
+	zeHub.Run()
 }

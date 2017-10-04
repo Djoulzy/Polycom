@@ -28,13 +28,7 @@ type CallToAction func(*Client, []byte)
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	ID  string
-	Hub *Hub
-
-	// WriteProtect sync.Mutex
-	// ReadProtect  sync.Mutex
-	Conn interface{}
-
+	ID           string
 	Send         chan []byte
 	Consistent   chan bool
 	Quit         chan bool
@@ -150,7 +144,6 @@ func (h *Hub) register(client *Client) {
 func (h *Hub) unregister(client *Client) {
 	if h.IsRegistered(client) {
 		delete(h.FullUsersList[client.CType], client.Name)
-		client.Hub = nil
 
 		select {
 		case client.Quit <- true:
@@ -190,11 +183,9 @@ func (h *Hub) Newrole(modif *ConnModifier) {
 func (h *Hub) broadcast(message *Message) {
 	list := h.FullUsersList[message.UserType]
 	for _, client := range list {
-		if client.Hub != nil {
-			select {
-			case client.Send <- message.Content:
-				h.SentMessByTicks++
-			}
+		select {
+		case client.Send <- message.Content:
+			h.SentMessByTicks++
 		}
 	}
 }

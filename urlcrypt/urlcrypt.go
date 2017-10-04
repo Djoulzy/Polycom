@@ -113,7 +113,6 @@ func (uc *Cypher) Encrypt_b64(text string) ([]byte, error) {
 	textHash := (uc.GetMD5Hash(text))[0:8]
 
 	signedText := append(textHash, []byte(text)...)
-	clog.Test("", "", "%s", signedText)
 	text_padded := uc.pkcs7pad(signedText, aes.BlockSize)
 
 	cbc := cipher.NewCBCEncrypter(block, iv_bin)
