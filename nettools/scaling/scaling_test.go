@@ -16,7 +16,7 @@ var slist *ServersList
 
 func newClient(name string, userType int) *hub.Client {
 	tmpClient := &hub.Client{
-		Hub: tmpHub, Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool),
+		Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool),
 		CType: userType, Send: make(chan []byte, 256),
 		CallToAction: nil, Addr: "10.31.100.200:8081",
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "Test Socket",

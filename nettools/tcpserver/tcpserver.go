@@ -104,7 +104,7 @@ func (m *Manager) Connect(addr string) (*net.TCPConn, error) {
 }
 
 func (m *Manager) newClient(conn *net.TCPConn, name string) *hub.Client {
-	client := &hub.Client{Hub: m.Hub, Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
+	client := &hub.Client{Conn: conn, Consistent: make(chan bool), Quit: make(chan bool),
 		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: conn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket"}
 	m.Hub.Register <- client

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"html/template"
 	"log"
-	"net/http"
-	"net/url"
 	"time"
 
-	"github.com/gorilla/websocket"
+	// "github.com/gorilla/websocket"
+	"github.com/fasthttp-contrib/websocket"
+	"github.com/valyala/fasthttp"
 
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
@@ -31,7 +31,6 @@ var (
 type Manager struct {
 	Httpaddr         string
 	ServerName       string
-	Upgrader         websocket.Upgrader
 	Hub              *hub.Hub
 	ReadBufferSize   int
 	WriteBufferSize  int
@@ -40,37 +39,37 @@ type Manager struct {
 	Cryptor          *urlcrypt.Cypher
 }
 
-func (m *Manager) Connect() *websocket.Conn {
-	u := url.URL{Scheme: "ws", Host: m.Httpaddr, Path: "/ws"}
-	clog.Info("HTTPServer", "Connect", "Connecting to %s", u.String())
-
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		clog.Error("HTTPServer", "Connect", "%s", err)
-		return nil
-	}
-
-	return conn
-}
+// func (m *Manager) Connect() *websocket.Conn {
+// 	u := url.URL{Scheme: "ws", Host: m.Httpaddr, Path: "/ws"}
+// 	clog.Info("HTTPServer", "Connect", "Connecting to %s", u.String())
+//
+// 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+// 	if err != nil {
+// 		clog.Error("HTTPServer", "Connect", "%s", err)
+// 		return nil
+// 	}
+//
+// 	return conn
+// }
 
 // readPump pumps messages from the websocket connection to the hub.
 //
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (m *Manager) Reader(c *hub.Client) {
+func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
+	// conn := c.(*websocket.Conn)
 	defer func() {
-		c.Conn.(*websocket.Conn).Close()
+		conn.Close()
 	}()
 
-	conn := c.Conn.(*websocket.Conn)
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		// c.ReadProtect.Lock()
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		// c.ReadProtect.Unlock()
-		clog.Debug("HTTPServer", "Reader", "PONG! from %s", c.Name)
+		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
 		return nil
 	})
 	for {
@@ -88,7 +87,7 @@ func (m *Manager) Reader(c *hub.Client) {
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
 		// mess := Hub.NewMessage(c.CType, c, message)
 		// c.Hub.Action <- mess
-		go m.CallToAction(c, message)
+		go m.CallToAction(cli, message)
 	}
 }
 
@@ -102,22 +101,21 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 	return ws.WriteMessage(mt, message)
 }
 
-func (m *Manager) Writer(c *hub.Client) {
+func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.Conn.(*websocket.Conn).Close()
+		conn.Close()
 	}()
 
-	conn := c.Conn.(*websocket.Conn)
 	for {
 		select {
-		case message, ok := <-c.Send:
+		case message, ok := <-cli.Send:
 			if !ok {
 				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
 				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
 				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
+					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
 				}
 				return
 			}
@@ -126,21 +124,22 @@ func (m *Manager) Writer(c *hub.Client) {
 				return
 			}
 		case <-ticker.C:
-			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", c.Name)
+			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
 			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
-		case <-c.Quit:
+		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
 			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", c.Name)
+				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
 			}
 			return
 		}
 	}
 }
 
-func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
+func (m *Manager) statusPage(ctx *fasthttp.RequestCtx) {
+	ctx.SetContentType("text/html")
 	handShake, _ := m.Cryptor.Encrypt_b64("MNTR|Monitoring|MNTR")
 	var data = struct {
 		Host   string
@@ -161,10 +160,11 @@ func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
 		clog.Error("HTTPServer", "statusPage", "%s", err)
 		return
 	}
-	homeTempl.Execute(w, &data)
+	homeTempl.Execute(ctx, &data)
 }
 
-func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
+func (m *Manager) testPage(ctx *fasthttp.RequestCtx) {
+	ctx.SetContentType("text/html")
 	handShake, _ := m.Cryptor.Encrypt_b64("LOAD_1|TestPage|USER")
 
 	var data = struct {
@@ -180,21 +180,14 @@ func (m *Manager) testPage(w http.ResponseWriter, r *http.Request) {
 		clog.Error("HTTPServer", "testPage", "%s", err)
 		return
 	}
-	homeTempl.Execute(w, &data)
+	homeTempl.Execute(ctx, &data)
 }
 
-// serveWs handles websocket requests from the peer.
-func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
-	httpconn, err := m.Upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		clog.Error("HTTPServer", "wsConnect", "%s", err)
-		return
-	}
-	name := r.Header["Sec-Websocket-Key"][0]
-
+func (m *Manager) WSHandler(c *websocket.Conn, headers *fasthttp.RequestHeader) {
 	var ua string
-	if len(r.Header["User-Agent"]) > 0 {
-		ua = r.Header["User-Agent"][0]
+	name := string(headers.Peek("Sec-Websocket-Key"))
+	if len(headers.Peek("User-Agent")) > 0 {
+		ua = string(headers.Peek("User-Agent"))
 	} else {
 		ua = "n/a"
 	}
@@ -204,39 +197,63 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &hub.Client{Hub: m.Hub, Conn: httpconn, Consistent: make(chan bool), Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
+	clog.Test("HTTPServer", "WSHandler", "New Client")
+	client := &hub.Client{Consistent: make(chan bool), Quit: make(chan bool),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction,
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
+	client.Addr = c.RemoteAddr().String()
+
 	m.Hub.Register <- client
 	<-client.Consistent
-	go m.Writer(client)
-	m.Reader(client)
+	go m.Writer(c, client)
+	m.Reader(c, client)
 	m.Hub.Unregister <- client
 	<-client.Consistent
 }
 
+// serveWs handles websocket requests from the peer.
+func (m *Manager) wsConnect(ctx *fasthttp.RequestCtx) {
+	var headers fasthttp.RequestHeader
+	ctx.Request.Header.CopyTo(&headers)
+	upgrader := websocket.New(func(c *websocket.Conn) { m.WSHandler(c, &headers) })
+	err := upgrader.Upgrade(ctx)
+	if err != nil {
+		clog.Error("HTTPServer", "wsConnect", "%s", err)
+		return
+	}
+}
+
 func (m *Manager) Start(conf *Manager) {
 	m = conf
-	m.Upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-		Error: func(w http.ResponseWriter, r *http.Request, status int, reason error) {
-			clog.Error("httpserver", "Start", "Error %s", reason)
-		},
-		ReadBufferSize:   m.ReadBufferSize,
-		WriteBufferSize:  m.WriteBufferSize,
-		HandshakeTimeout: time.Duration(m.HandshakeTimeout) * time.Second,
-	} // use default options
+	// m.Upgrader = upgrader.Upgrade{
+	// 	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
+	// 		return true
+	// 	},
+	// 	Error: func(ctx *fasthttp.RequestCtx, status int, reason error) {
+	// 		clog.Error("httpserver", "Start", "Error %s", reason)
+	// 	},
+	// 	ReadBufferSize:   m.ReadBufferSize,
+	// 	WriteBufferSize:  m.WriteBufferSize,
+	// 	HandshakeTimeout: time.Duration(m.HandshakeTimeout) * time.Second,
+	// } // use default options
 
-	fs := http.FileServer(http.Dir("../html/js"))
-	http.Handle("/js/", http.StripPrefix("/js/", fs))
+	fs := fasthttp.FSHandler("../html/js", 0)
+	h := func(ctx *fasthttp.RequestCtx) {
+		switch string(ctx.Path()) {
+		case "/test":
+			m.testPage(ctx)
+		case "/status":
+			m.statusPage(ctx)
+		case "/ws":
+			m.wsConnect(ctx)
+		case "/js":
+			fs(ctx)
+		default:
+			ctx.Error("not found", fasthttp.StatusNotFound)
+		}
+	}
 
-	http.HandleFunc("/test", m.testPage)
-	http.HandleFunc("/status", m.statusPage)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { m.wsConnect(w, r) })
-
-	err := http.ListenAndServe(m.Httpaddr, nil)
+	err := fasthttp.ListenAndServe(m.Httpaddr, h)
 	if err != nil {
 		log.Fatal("HTTPServer: ", err)
 	}

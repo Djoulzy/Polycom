@@ -169,12 +169,12 @@ func main() {
 
 	u := url.URL{Scheme: "ws", Host: *httpaddr, Path: "/ws"}
 
-	for i := 0; i < 180; i++ {
+	for i := 0; i < 10000; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()
-		duration := time.Second / 100
-		time.Sleep(duration)
+		// duration := time.Second / 100
+		// time.Sleep(duration)
 		connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i))
 		clog.Debug("test_load", "main", "Connecting %s ...", connString)
 		Clients[i].send <- append([]byte("[HELO]"), []byte(connString)...)

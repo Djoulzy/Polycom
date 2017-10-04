@@ -13,7 +13,7 @@ var tmpHub *Hub
 
 func newClient(name string, userType int) *Client {
 	tmpClient := &Client{
-		Hub: tmpHub, Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool, 8),
+		Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool, 8),
 		CType: userType, Send: make(chan []byte, 256),
 		CallToAction: nil, Addr: "127.0.0.1:8080",
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "Test Socket",
@@ -47,7 +47,6 @@ func TestUnregister(t *testing.T) {
 	<-tmpClient.Consistent
 
 	assert.Nil(t, tmpHub.GetClientByName(tmpClient.Name, tmpClient.CType))
-	assert.Nil(t, tmpClient.Hub)
 
 	tmpClient3 := newClient("TestRegister", ClientServer)
 	tmpHub.Register <- tmpClient3
@@ -55,7 +54,6 @@ func TestUnregister(t *testing.T) {
 	assert.Equal(t, tmpClient3, tmpHub.GetClientByName(tmpClient3.Name, tmpClient3.CType), "Registered Client should equal original Client")
 	tmpHub.Register <- tmpClient3
 	<-tmpClient3.Consistent
-	assert.Nil(t, tmpClient3.Hub)
 }
 
 func TestConcurrency(t *testing.T) {
