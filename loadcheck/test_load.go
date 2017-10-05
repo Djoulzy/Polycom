@@ -173,10 +173,11 @@ func main() {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()
-		duration := time.Second / 100
+		duration := time.Second / 10
 		time.Sleep(duration)
-		connString, _ := cryptor.Encrypt_b64(fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i))
-		clog.Debug("test_load", "main", "Connecting %s ...", connString)
+		passPhrase := fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i)
+		connString, _ := cryptor.Encrypt_b64(passPhrase)
+		clog.Debug("test_load", "main", "Connecting %s [%s] ...", passPhrase, connString)
 		Clients[i].send <- append([]byte("[HELO]"), []byte(connString)...)
 	}
 
