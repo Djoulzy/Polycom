@@ -224,6 +224,17 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 	go m.WSHandler(httpconn, headers)
 }
 
+func throttleClients(h http.Handler, n int) http.Handler {
+	sema := make(chan struct{}, n)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sema <- struct{}{}
+		defer func() { <-sema }()
+
+		h.ServeHTTP(w, r)
+	})
+}
+
 func (m *Manager) Start(conf *Manager) {
 	m = conf
 	Upgrader = &websocket.Upgrader{
@@ -243,7 +254,9 @@ func (m *Manager) Start(conf *Manager) {
 
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { m.wsConnect(w, r) })
+
+	handler := http.HandlerFunc(m.wsConnect)
+	http.Handle("/ws", throttleClients(handler, 1))
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
 	if err != nil {
