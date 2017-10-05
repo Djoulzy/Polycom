@@ -116,9 +116,9 @@ func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
 		// c.ReadProtect.Lock()
 		// messType, message, err := conn.ReadMessage()
 		// c.ReadProtect.Unlock()
-		if conn == nil {
-			return
-		}
+		// if conn == nil {
+		// 	return
+		// }
 		// conn.SetReadDeadline(time.Now().Add(pongWait))
 		_, message, err := conn.ReadMessage()
 		// clog.Debug("HTTPServer", "Writer", "Read from Client %s [%s]: %s", c.Name, c.ID, message)
@@ -149,6 +149,7 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
+		conn.Close()
 	}()
 
 	for {
@@ -217,6 +218,7 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 	httpconn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		clog.Error("HTTPServer", "wsConnect", "%s", err)
+		httpconn.Close()
 		return
 	}
 	go m.WSHandler(httpconn, headers)

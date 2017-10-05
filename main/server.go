@@ -1,6 +1,8 @@
 package main
 
 import (
+	"runtime"
+
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/nettools/httpserver"
 	"github.com/Djoulzy/Polycom/nettools/scaling"
@@ -29,6 +31,7 @@ func main() {
 	clog.LogLevel = conf.LogLevel
 	clog.StartLogging = conf.StartLogging
 
+	clog.Output("Using %d CPUs", runtime.GOMAXPROCS(runtime.NumCPU()))
 	Cryptor = &urlcrypt.Cypher{
 		HASH_SIZE: conf.HASH_SIZE,
 		HEX_KEY:   []byte(conf.HEX_KEY),
