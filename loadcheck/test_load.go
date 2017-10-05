@@ -169,12 +169,12 @@ func main() {
 		HEX_IV:    []byte(conf.HEX_IV),
 	}
 
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()
-		duration := time.Second / 10
-		time.Sleep(duration)
+		// duration := time.Second / 100
+		// time.Sleep(duration)
 		passPhrase := fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i)
 		connString, _ := cryptor.Encrypt_b64(passPhrase)
 		clog.Debug("test_load", "main", "Connecting %s [%s] ...", passPhrase, connString)
@@ -198,7 +198,7 @@ func main() {
 			connString := fmt.Sprintf("LOAD_%d", index)
 			if client.ws != nil {
 				client.send <- append([]byte("[BCST]"), []byte(connString)...)
-				duration := time.Second / 10
+				duration := time.Second
 				time.Sleep(duration)
 			} else {
 				delete(Clients, index)
