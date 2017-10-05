@@ -119,13 +119,14 @@ func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
 		if conn == nil {
 			return
 		}
+		// conn.SetReadDeadline(time.Now().Add(pongWait))
 		_, message, err := conn.ReadMessage()
 		// clog.Debug("HTTPServer", "Writer", "Read from Client %s [%s]: %s", c.Name, c.ID, message)
 		if err != nil {
 			// clog.Error("HTTPServer", "Writer", "Type: %d, error: %v", messType, err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 			}
-			break
+			return
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
 		// mess := Hub.NewMessage(c.CType, c, message)
