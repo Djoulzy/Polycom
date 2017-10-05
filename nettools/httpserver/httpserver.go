@@ -103,6 +103,11 @@ func (m *Manager) Connect() *websocket.Conn {
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
 func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
+	defer func() {
+		m.Hub.Unregister <- cli
+		<-cli.Consistent
+		conn.Close()
+	}()
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
@@ -184,8 +189,6 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 
 // serveWs handles websocket requests from the peer.
 func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
-	defer c.Close()
-
 	var ua string
 	name := headers["Sec-Websocket-Key"][0]
 	if len(headers["User-Agent"]) > 0 {
@@ -206,10 +209,10 @@ func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
 	m.Hub.Register <- client
 	<-client.Consistent
 	go m.Writer(c, client)
-	m.Reader(c, client)
-	clog.Trace("END", "END", "END")
-	m.Hub.Unregister <- client
-	<-client.Consistent
+	go m.Reader(c, client)
+	// clog.Trace("END", "END", "END")
+	// m.Hub.Unregister <- client
+	// <-client.Consistent
 }
 
 // serveWs handles websocket requests from the peer.
@@ -221,7 +224,7 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 		httpconn.Close()
 		return
 	}
-	go m.WSHandler(httpconn, headers)
+	m.WSHandler(httpconn, headers)
 }
 
 func throttleClients(h http.Handler, n int) http.Handler {
@@ -255,8 +258,9 @@ func (m *Manager) Start(conf *Manager) {
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
 
-	handler := http.HandlerFunc(m.wsConnect)
-	http.Handle("/ws", throttleClients(handler, 1))
+	// handler := http.HandlerFunc(m.wsConnect)
+	// http.Handle("/ws", throttleClients(handler, 1))
+	http.HandleFunc("/ws", m.wsConnect)
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
 	if err != nil {
