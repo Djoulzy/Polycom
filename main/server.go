@@ -100,6 +100,7 @@ func main() {
 		ReadBufferSize:   conf.ReadBufferSize,
 		WriteBufferSize:  conf.WriteBufferSize,
 		HandshakeTimeout: conf.HandshakeTimeout,
+		NBAcceptBySecond: conf.NBAcceptBySecond,
 		CallToAction:     CallToAction,
 		Cryptor:          Cryptor,
 	}

@@ -28,6 +28,7 @@ type KnownBrothers struct {
 type HTTPServerConfig struct {
 	ReadBufferSize   int
 	WriteBufferSize  int
+	NBAcceptBySecond int
 	HandshakeTimeout int
 }
 
@@ -74,6 +75,7 @@ var conf *AppConfig = &AppConfig{
 	HTTPServerConfig{
 		ReadBufferSize:   4096,
 		WriteBufferSize:  4096,
+		NBAcceptBySecond: 20,
 		HandshakeTimeout: 5,
 	},
 	TCPServerConfig{

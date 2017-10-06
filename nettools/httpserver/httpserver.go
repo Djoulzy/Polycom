@@ -36,6 +36,7 @@ type Manager struct {
 	Hub              *hub.Hub
 	ReadBufferSize   int
 	WriteBufferSize  int
+	NBAcceptBySecond int
 	HandshakeTimeout int
 	CallToAction     func(*hub.Client, []byte)
 	Cryptor          *urlcrypt.Cypher
@@ -196,17 +197,14 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 }
 
 func throttleClients(h http.Handler, n int) http.Handler {
-	ticker := time.NewTicker(time.Second / 20)
+	ticker := time.NewTicker(time.Second / time.Duration(n))
 	// sema := make(chan struct{}, n)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// sema <- struct{}{}
 		// defer func() { <-sema }()
-		select {
-		case <-ticker.C:
-			clog.Trace("", "", "TICK")
-			h.ServeHTTP(w, r)
-		}
+		<-ticker.C
+		h.ServeHTTP(w, r)
 	})
 }
 
@@ -231,7 +229,7 @@ func (m *Manager) Start(conf *Manager) {
 	http.HandleFunc("/status", m.statusPage)
 
 	handler := http.HandlerFunc(m.wsConnect)
-	http.Handle("/ws", throttleClients(handler, 1))
+	http.Handle("/ws", throttleClients(handler, m.NBAcceptBySecond))
 	// http.HandleFunc("/ws", m.wsConnect)
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
