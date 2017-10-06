@@ -26,7 +26,7 @@ var Storage *storage.Driver
 
 var zeHub *hub.Hub
 
-func maxOpenFiles() uint64 {
+func maxOpenFiles() int {
 	var rLimit syscall.Rlimit
 
 	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
@@ -42,7 +42,7 @@ func maxOpenFiles() uint64 {
 		}
 	}
 
-	return rLimit.Cur
+	return int(rLimit.Cur)
 }
 
 func main() {
@@ -53,8 +53,18 @@ func main() {
 
 	// System Optims
 	clog.Output("Using %d CPUs.", runtime.GOMAXPROCS(runtime.NumCPU()))
-	clog.Output("Setting maxOpenFiles to %d.", maxOpenFiles())
+	maxFiles := maxOpenFiles()
+	clog.Output("Setting maxOpenFiles to %d.", maxFiles)
 	////////////////
+
+	totalConn := conf.MaxUsersConns + conf.MaxMonitorsConns + conf.MaxServersConns + conf.MaxIncommingConns
+	if totalConn > maxFiles {
+		conf.MaxUsersConns = maxFiles - 120
+		conf.MaxMonitorsConns = 3
+		conf.MaxServersConns = 10
+		conf.MaxIncommingConns = 100
+		clog.Warn("server", "main", "Setting MaxUser to %d.", conf.MaxUsersConns)
+	}
 
 	Cryptor = &urlcrypt.Cypher{
 		HASH_SIZE: conf.HASH_SIZE,
