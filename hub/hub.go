@@ -30,11 +30,9 @@ type CallToAction func(*Client, []byte)
 type Client struct {
 	ID           string
 	Send         chan []byte
-	Consistent   chan bool
 	Quit         chan bool
 	CallToAction CallToAction
 
-	// Identified bool
 	Addr       string
 	CType      int
 	Name       string
@@ -43,7 +41,6 @@ type Client struct {
 	App_id     string
 	Country    string
 	User_agent string
-	// Mode       int
 }
 
 type Message struct {
@@ -206,10 +203,10 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.Register:
 			h.register(client)
-			client.Consistent <- true
+			// client.Consistent <- true
 		case client := <-h.Unregister:
 			h.unregister(client)
-			client.Consistent <- true
+			// client.Consistent <- true
 		// case message := <-h.Status:
 		// 	h.updateStatus(message)
 		case message := <-h.Broadcast:

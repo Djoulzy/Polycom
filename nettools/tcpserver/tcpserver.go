@@ -102,11 +102,11 @@ func (m *Manager) Connect(addr string) (*net.TCPConn, error) {
 }
 
 func (m *Manager) newClient(addr string, name string) *hub.Client {
-	client := &hub.Client{Consistent: make(chan bool), Quit: make(chan bool),
+	client := &hub.Client{Quit: make(chan bool),
 		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: addr,
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "TCP Socket"}
 	m.Hub.Register <- client
-	<-client.Consistent
+	// <-client.Consistent
 	return client
 }
 
@@ -121,7 +121,7 @@ func (m *Manager) NewOutgoingConn(conn *net.TCPConn, toName string, wg *sync.Wai
 	(*wg).Done()
 	m.reader(conn, client)
 	m.Hub.Unregister <- client
-	<-client.Consistent
+	// <-client.Consistent
 }
 
 func (m *Manager) NewIncommingConn(conn *net.TCPConn, wg *sync.WaitGroup) {
@@ -134,7 +134,7 @@ func (m *Manager) NewIncommingConn(conn *net.TCPConn, wg *sync.WaitGroup) {
 	(*wg).Done()
 	m.reader(conn, client)
 	m.Hub.Unregister <- client
-	<-client.Consistent
+	// <-client.Consistent
 }
 
 func (m *Manager) Start(conf *Manager) {

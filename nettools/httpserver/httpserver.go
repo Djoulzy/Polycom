@@ -97,54 +97,31 @@ func (m *Manager) Connect() *websocket.Conn {
 	return conn
 }
 
-// readPump pumps messages from the websocket connection to the hub.
-//
-// The application runs readPump in a per-connection goroutine. The application
-// ensures that there is at most one reader on a connection by executing all
-// reads from this goroutine.
 func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
 	defer func() {
 		m.Hub.Unregister <- cli
-		<-cli.Consistent
 		conn.Close()
 	}()
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
-		// c.ReadProtect.Lock()
 		conn.SetReadDeadline(time.Now().Add(pongWait))
-		// c.ReadProtect.Unlock()
 		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
 		return nil
 	})
 	for {
-		// c.ReadProtect.Lock()
-		// messType, message, err := conn.ReadMessage()
-		// c.ReadProtect.Unlock()
-		// if conn == nil {
-		// 	return
-		// }
-		// conn.SetReadDeadline(time.Now().Add(pongWait))
 		_, message, err := conn.ReadMessage()
-		// clog.Debug("HTTPServer", "Writer", "Read from Client %s [%s]: %s", c.Name, c.ID, message)
 		if err != nil {
-			// clog.Error("HTTPServer", "Writer", "Type: %d, error: %v", messType, err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				clog.Error("HTTPServer", "Reader", "%v", err)
 			}
 			return
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, Newline, Space, -1))
-		// mess := Hub.NewMessage(c.CType, c, message)
-		// c.Hub.Action <- mess
 		go m.CallToAction(cli, message)
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
 func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 	ws.SetWriteDeadline(time.Now().Add(writeWait))
 	return ws.WriteMessage(mt, message)
@@ -164,7 +141,7 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 				clog.Warn("HTTPServer", "Writer", "Error: %s", ok)
 				cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Something went wrong !")
 				if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-					clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
+					clog.Error("HTTPServer", "Writer", "Connection lost ! Cannot send CloseMessage to %s", cli.Name)
 				}
 				return
 			}
@@ -180,7 +157,7 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
 			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
-				clog.Error("HTTPServer", "_close", "Cannot write CloseMessage to %s", cli.Name)
+				clog.Error("HTTPServer", "Writer", "Cannot write CloseMessage to %s", cli.Name)
 			}
 			return
 		}
@@ -188,11 +165,11 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 }
 
 // serveWs handles websocket requests from the peer.
-func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
+func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 	var ua string
-	name := headers["Sec-Websocket-Key"][0]
-	if len(headers["User-Agent"]) > 0 {
-		ua = headers["User-Agent"][0]
+	name := r.Header["Sec-Websocket-Key"][0]
+	if len(r.Header["User-Agent"]) > 0 {
+		ua = r.Header["User-Agent"][0]
 	} else {
 		ua = "n/a"
 	}
@@ -202,39 +179,34 @@ func (m *Manager) WSHandler(c *websocket.Conn, headers http.Header) {
 		return
 	}
 
-	client := &hub.Client{Consistent: make(chan bool), Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: c.RemoteAddr().String(),
-		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
-
-	m.Hub.Register <- client
-	<-client.Consistent
-	go m.Writer(c, client)
-	go m.Reader(c, client)
-	// clog.Trace("END", "END", "END")
-	// m.Hub.Unregister <- client
-	// <-client.Consistent
-}
-
-// serveWs handles websocket requests from the peer.
-func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
-	headers := r.Header
 	httpconn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		clog.Error("HTTPServer", "wsConnect", "%s", err)
 		httpconn.Close()
 		return
 	}
-	m.WSHandler(httpconn, headers)
+
+	client := &hub.Client{Quit: make(chan bool),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
+		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
+
+	m.Hub.Register <- client
+	go m.Writer(httpconn, client)
+	go m.Reader(httpconn, client)
 }
 
 func throttleClients(h http.Handler, n int) http.Handler {
-	sema := make(chan struct{}, n)
+	ticker := time.NewTicker(time.Second / 20)
+	// sema := make(chan struct{}, n)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sema <- struct{}{}
-		defer func() { <-sema }()
-
-		h.ServeHTTP(w, r)
+		// sema <- struct{}{}
+		// defer func() { <-sema }()
+		select {
+		case <-ticker.C:
+			clog.Trace("", "", "TICK")
+			h.ServeHTTP(w, r)
+		}
 	})
 }
 
@@ -258,9 +230,9 @@ func (m *Manager) Start(conf *Manager) {
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
 
-	// handler := http.HandlerFunc(m.wsConnect)
-	// http.Handle("/ws", throttleClients(handler, 1))
-	http.HandleFunc("/ws", m.wsConnect)
+	handler := http.HandlerFunc(m.wsConnect)
+	http.Handle("/ws", throttleClients(handler, 1))
+	// http.HandleFunc("/ws", m.wsConnect)
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 func welcomeNewMonitor(c *hub.Client, newName string, app_id string) {
 	if len(zeHub.Monitors) >= conf.MaxMonitorsConns {
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 	} else {
 		zeHub.Newrole(&hub.ConnModifier{Client: c, NewName: c.Name, NewType: hub.ClientMonitor})
 		c.App_id = app_id
@@ -27,7 +27,7 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 				clog.Error("server", "welcomeNewUser", "NO FREE SLOTS !!!")
 			}
 			zeHub.Unregister <- c
-			<-c.Consistent
+			// <-c.Consistent
 		} else {
 			clog.Info("server", "welcomeNewUser", "Identifying %s as %s", c.Name, newName)
 			zeHub.Newrole(&hub.ConnModifier{Client: c, NewName: newName, NewType: hub.ClientUser})
@@ -37,7 +37,7 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 	} else {
 		clog.Warn("server", "welcomeNewUser", "Can't identify client... Disconnecting %s.", c.Name)
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 	}
 }
 
@@ -45,7 +45,7 @@ func welcomeNewServer(c *hub.Client, newName string, addr string) {
 	if len(zeHub.Servers) >= conf.MaxServersConns {
 		clog.Warn("server", "welcomeNewServer", "Too many Server connections, rejecting %s (In:%d/Cl:%d).", c.Name, len(zeHub.Incomming), len(zeHub.Servers))
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 		return
 	}
 
@@ -57,7 +57,7 @@ func welcomeNewServer(c *hub.Client, newName string, addr string) {
 	} else {
 		clog.Warn("server", "welcomeNewServer", "Can't identify server... Disconnecting %s.", c.Name)
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 	}
 }
 
@@ -68,7 +68,7 @@ func HandShake(c *hub.Client, message []byte) {
 	if len(infos) != 3 {
 		clog.Warn("server", "HandShake", "Bad Handshake format ... Disconnecting")
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 		return
 	}
 
@@ -83,16 +83,15 @@ func HandShake(c *hub.Client, message []byte) {
 		welcomeNewUser(c, newName, App_id)
 	default:
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 	}
 }
 
 func CallToAction(c *hub.Client, message []byte) {
-	clog.Test("", "", "%s", message)
 	if len(message) < 6 {
 		clog.Warn("server", "CallToAction", "Bad Command '%s', disconnecting client %s.", message, c.Name)
 		zeHub.Unregister <- c
-		<-c.Consistent
+		// <-c.Consistent
 		return
 	}
 
@@ -113,7 +112,7 @@ func CallToAction(c *hub.Client, message []byte) {
 			Storage.NewRecord(string(action_group))
 		case "[QUIT]":
 			zeHub.Unregister <- c
-			<-c.Consistent
+			// <-c.Consistent
 		case "[MNIT]":
 			clog.Debug("server", "CallToAction", "Metrics received from %s (%s)", c.Name, c.Addr)
 			ScaleList.UpdateMetrics(c.Addr, action_group)
@@ -123,7 +122,7 @@ func CallToAction(c *hub.Client, message []byte) {
 				userToKill := zeHub.Users[id]
 				clog.Info("server", "CallToAction", "Killing user %s", action_group)
 				zeHub.Unregister <- userToKill
-				<-userToKill.Consistent
+				// <-userToKill.Consistent
 			}
 		case "[GKEY]":
 			crypted, _ := Cryptor.Encrypt_b64(string(action_group))
@@ -141,7 +140,7 @@ func CallToAction(c *hub.Client, message []byte) {
 		default:
 			clog.Warn("server", "CallToAction", "Bad Command '%s', disconnecting client %s.", cmd_group, c.Name)
 			zeHub.Unregister <- c
-			<-c.Consistent
+			// <-c.Consistent
 		}
 	}
 }

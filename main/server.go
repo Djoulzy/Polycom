@@ -2,6 +2,7 @@ package main
 
 import (
 	"runtime"
+	"syscall"
 
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/nettools/httpserver"
@@ -25,13 +26,36 @@ var Storage *storage.Driver
 
 var zeHub *hub.Hub
 
+func maxOpenFiles() uint64 {
+	var rLimit syscall.Rlimit
+
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		clog.Error("server", "maxOpenFiles", "Error Getting Rlimit %s", err)
+	}
+
+	if rLimit.Cur < rLimit.Max {
+		rLimit.Cur = rLimit.Max
+		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			clog.Error("server", "maxOpenFiles", "Error Setting Rlimit %s", err)
+		}
+	}
+
+	return rLimit.Cur
+}
+
 func main() {
 	config.Load("server.ini", conf)
 
 	clog.LogLevel = conf.LogLevel
 	clog.StartLogging = conf.StartLogging
 
-	clog.Output("Using %d CPUs", runtime.GOMAXPROCS(runtime.NumCPU()))
+	// System Optims
+	clog.Output("Using %d CPUs.", runtime.GOMAXPROCS(runtime.NumCPU()))
+	clog.Output("Setting maxOpenFiles to %d.", maxOpenFiles())
+	////////////////
+
 	Cryptor = &urlcrypt.Cypher{
 		HASH_SIZE: conf.HASH_SIZE,
 		HEX_KEY:   []byte(conf.HEX_KEY),
