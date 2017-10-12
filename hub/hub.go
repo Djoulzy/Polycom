@@ -44,6 +44,7 @@ type Client struct {
 }
 
 type Message struct {
+	From     *Client
 	UserType int
 	Dest     *Client
 	Content  []byte
@@ -96,8 +97,9 @@ func NewHub() *Hub {
 	return hub
 }
 
-func NewMessage(userType int, c *Client, content []byte) *Message {
+func NewMessage(from *Client, userType int, c *Client, content []byte) *Message {
 	m := &Message{
+		From:     from,
 		UserType: userType,
 		Dest:     c,
 		Content:  content,
@@ -158,7 +160,7 @@ func (h *Hub) unregister(client *Client) {
 				true,
 			}
 			json, _ := json.Marshal(data)
-			mess := NewMessage(ClientMonitor, nil, json)
+			mess := NewMessage(client, ClientMonitor, nil, json)
 			clog.Trace("Hub", "Unregister", "Broadcasting close of server %s : %s", client.Name, json)
 			h.broadcast(mess)
 		}
@@ -180,9 +182,11 @@ func (h *Hub) Newrole(modif *ConnModifier) {
 func (h *Hub) broadcast(message *Message) {
 	list := h.FullUsersList[message.UserType]
 	for _, client := range list {
-		select {
-		case client.Send <- message.Content:
-			h.SentMessByTicks++
+		if message.From != client {
+			select {
+			case client.Send <- message.Content:
+				h.SentMessByTicks++
+			}
 		}
 	}
 }

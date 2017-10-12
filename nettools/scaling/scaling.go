@@ -61,7 +61,7 @@ func (slist *ServersList) UpdateMetrics(addr string, message []byte) {
 		monitoring.AddBrother <- newSrv
 
 		if len(h.Monitors) > 0 {
-			mess := hub.NewMessage(hub.ClientMonitor, nil, message)
+			mess := hub.NewMessage(nil, hub.ClientMonitor, nil, message)
 			h.Broadcast <- mess
 		}
 	}
@@ -156,7 +156,7 @@ func (slist *ServersList) RedirectConnection(client *hub.Client) bool {
 
 func (slist *ServersList) DispatchNewConnection(h *hub.Hub, name string) {
 	message := []byte(fmt.Sprintf("[KILL]%s", name))
-	mess := hub.NewMessage(hub.ClientServer, nil, message)
+	mess := hub.NewMessage(nil, hub.ClientServer, nil, message)
 	h.Broadcast <- mess
 }
 

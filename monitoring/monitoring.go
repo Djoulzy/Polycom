@@ -147,11 +147,11 @@ func LoadAverage(h *hub.Hub, p *Params) {
 			} else {
 				if len(h.Monitors)+len(h.Servers) > 0 {
 					h.SentMessByTicks = 0
-					mess := hub.NewMessage(hub.ClientMonitor, nil, json)
+					mess := hub.NewMessage(nil, hub.ClientMonitor, nil, json)
 					h.Broadcast <- mess
-					mess = hub.NewMessage(hub.ClientServer, nil, append([]byte("[MNIT]"), json...))
+					mess = hub.NewMessage(nil, hub.ClientServer, nil, append([]byte("[MNIT]"), json...))
 					h.Broadcast <- mess
-					mess = hub.NewMessage(hub.ClientUser, nil, append([]byte("[FLBK]"), brth_json...))
+					mess = hub.NewMessage(nil, hub.ClientUser, nil, append([]byte("[FLBK]"), brth_json...))
 					h.Broadcast <- mess
 				}
 			}

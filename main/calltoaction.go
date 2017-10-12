@@ -33,6 +33,9 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 			zeHub.Newrole(&hub.ConnModifier{Client: c, NewName: newName, NewType: hub.ClientUser})
 			c.App_id = app_id
 			ScaleList.DispatchNewConnection(zeHub, c.Name)
+			message := []byte(fmt.Sprintf("[NUSR]%s", c.Name))
+			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
+			zeHub.Broadcast <- mess
 		}
 	} else {
 		clog.Warn("server", "welcomeNewUser", "Can't identify client... Disconnecting %s.", c.Name)
@@ -100,11 +103,15 @@ func CallToAction(c *hub.Client, message []byte) {
 
 	if c.CType != hub.ClientUndefined {
 		switch cmd_group {
+		case "[NUSR]":
+			fallthrough
 		case "[BCST]":
-			mess := hub.NewMessage(hub.ClientUser, nil, action_group)
+			clog.Trace("", "", "%s", message)
+
+			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			zeHub.Broadcast <- mess
 			if c.CType != hub.ClientServer {
-				mess = hub.NewMessage(hub.ClientServer, nil, message)
+				mess = hub.NewMessage(c, hub.ClientServer, nil, message)
 				zeHub.Broadcast <- mess
 			}
 		case "[UCST]":
@@ -126,10 +133,10 @@ func CallToAction(c *hub.Client, message []byte) {
 			}
 		case "[GKEY]":
 			crypted, _ := Cryptor.Encrypt_b64(string(action_group))
-			mess := hub.NewMessage(c.CType, c, crypted)
+			mess := hub.NewMessage(nil, c.CType, c, crypted)
 			zeHub.Unicast <- mess
 		default:
-			mess := hub.NewMessage(c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
+			mess := hub.NewMessage(nil, c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
 			zeHub.Unicast <- mess
 		}
 	} else {

@@ -16,7 +16,7 @@ var slist *ServersList
 
 func newClient(name string, userType int) *hub.Client {
 	tmpClient := &hub.Client{
-		Conn: "NoC", Consistent: make(chan bool), Quit: make(chan bool),
+		Quit:  make(chan bool),
 		CType: userType, Send: make(chan []byte, 256),
 		CallToAction: nil, Addr: "10.31.100.200:8081",
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: "Test Socket",
@@ -38,7 +38,6 @@ func TestAddServer(t *testing.T) {
 func TestAddNewConnectedServer(t *testing.T) {
 	regSrv := newClient("test1", hub.ClientUndefined)
 	tmpHub.Register <- regSrv
-	<-regSrv.Consistent
 	tmpHub.Newrole(&hub.ConnModifier{Client: regSrv, NewName: "test1", NewType: hub.ClientServer})
 
 	slist.AddNewConnectedServer(regSrv)
@@ -66,7 +65,6 @@ func TestUpdateMetrics(t *testing.T) {
 func TestRedirectConnection(t *testing.T) {
 	tmpClient := newClient("Toto", hub.ClientUser)
 	tmpHub.Register <- tmpClient
-	<-tmpClient.Consistent
 
 	slist.RedirectConnection(tmpClient)
 	ret := <-tmpClient.Send

@@ -72,7 +72,7 @@ func TestMessages(t *testing.T) {
 		tmpHub.Register <- tmpClient
 	}
 
-	mess := NewMessage(ClientUser, nil, []byte("BROADCAST"))
+	mess := NewMessage(tmpClient, ClientUser, nil, []byte("BROADCAST"))
 	tmpHub.Broadcast <- mess
 
 	for i := 0; i < 10; i++ {
@@ -87,7 +87,7 @@ func TestMessages(t *testing.T) {
 		}
 	}
 
-	mess = NewMessage(ClientUser, tmpClient, []byte("UNICAST"))
+	mess = NewMessage(nil, ClientUser, tmpClient, []byte("UNICAST"))
 	tmpHub.Unicast <- mess
 
 	message, ok := <-tmpClient.Send

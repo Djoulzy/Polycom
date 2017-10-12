@@ -169,12 +169,10 @@ func main() {
 		HEX_IV:    []byte(conf.HEX_IV),
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 5000; i++ {
 		wg.Add(1)
 		go connect(i, u)
 		wg.Wait()
-		// duration := time.Second / 100
-		// time.Sleep(duration)
 		passPhrase := fmt.Sprintf("LOAD_%d|wmsa_BR|USER", i)
 		connString, _ := cryptor.Encrypt_b64(passPhrase)
 		clog.Debug("test_load", "main", "Connecting %s [%s] ...", passPhrase, connString)
