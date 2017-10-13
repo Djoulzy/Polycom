@@ -140,16 +140,19 @@ func (uc *Cypher) Decrypt_b64(enc_text string) ([]byte, error) {
 		text_pad = padder[len(encoded_str[1])%4:]
 	}
 
+	clog.Info("Crypt", "Decrypt_b64", "IV_B64: %s\nTXT_B64: %s", encoded_str[0], encoded_str[1])
+
 	iv_b64 := strings.Replace(strings.Replace(encoded_str[0], "_", "/", -1), "-", "+", -1) + iv_pad
 	text_b64 := strings.Replace(strings.Replace(encoded_str[1], "_", "/", -1), "-", "+", -1) + text_pad
 
-	// clog.Info("Crypt", "Decrypt_b64", "IV_B64: %s\nTXT_B64: %s", iv_b64, text_b64)
+	clog.Info("Crypt", "Decrypt_b64", "IV_B64: %s\nTXT_B64: %s", iv_b64, text_b64)
 
 	key_bin := make([]byte, hex.DecodedLen(len(uc.HEX_KEY)))
 	hex.Decode(key_bin, uc.HEX_KEY)
 	iv_bin := uc.decodeBase64(iv_b64)
+	clog.Trace("", "", "here")
 	text_bin := uc.decodeBase64(text_b64)
-
+	clog.Trace("", "", "and here")
 	block, err := aes.NewCipher(key_bin)
 	if err != nil {
 		return nil, err

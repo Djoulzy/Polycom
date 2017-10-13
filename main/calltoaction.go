@@ -33,9 +33,13 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 			zeHub.Newrole(&hub.ConnModifier{Client: c, NewName: newName, NewType: hub.ClientUser})
 			c.App_id = app_id
 			ScaleList.DispatchNewConnection(zeHub, c.Name)
+
 			message := []byte(fmt.Sprintf("[NUSR]%s", c.Name))
 			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			zeHub.Broadcast <- mess
+			message = []byte(fmt.Sprintf("[WLCM]%s", c.Name))
+			mess = hub.NewMessage(nil, hub.ClientUser, c, message)
+			zeHub.Unicast <- mess
 		}
 	} else {
 		clog.Warn("server", "welcomeNewUser", "Can't identify client... Disconnecting %s.", c.Name)
