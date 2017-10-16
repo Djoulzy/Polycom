@@ -110,8 +110,7 @@ func CallToAction(c *hub.Client, message []byte) {
 		case "[NUSR]":
 			fallthrough
 		case "[BCST]":
-			clog.Trace("", "", "%s", message)
-
+			// clog.Trace("", "", "%s", message)
 			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			zeHub.Broadcast <- mess
 			if c.CType != hub.ClientServer {

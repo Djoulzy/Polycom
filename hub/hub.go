@@ -30,6 +30,7 @@ type CallToAction func(*Client, []byte)
 type Client struct {
 	ID           string
 	Send         chan []byte
+	Enqueue      chan []byte
 	Quit         chan bool
 	CallToAction CallToAction
 
@@ -182,11 +183,12 @@ func (h *Hub) Newrole(modif *ConnModifier) {
 func (h *Hub) broadcast(message *Message) {
 	list := h.FullUsersList[message.UserType]
 	for _, client := range list {
-		if message.From != client {
-			select {
-			case client.Send <- message.Content:
-				h.SentMessByTicks++
-			}
+		if message.UserType == ClientUser {
+			client.Enqueue <- message.Content
+		}
+		select {
+		case client.Send <- message.Content:
+			h.SentMessByTicks++
 		}
 	}
 }

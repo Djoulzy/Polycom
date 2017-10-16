@@ -20,6 +20,7 @@ const (
 	writeWait      = 5 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
+	timeStep       = time.Second // 100 * time.Millisecond // Actualisation 10 par seconde
 	maxMessageSize = 512
 )
 
@@ -29,6 +30,10 @@ var (
 )
 
 var Upgrader *websocket.Upgrader
+
+type Message []byte
+
+var MessageQueue []Message
 
 type Manager struct {
 	Httpaddr         string
@@ -129,7 +134,7 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 }
 
 func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
-	ticker := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(timeStep)
 	defer func() {
 		ticker.Stop()
 		conn.Close()
@@ -150,10 +155,22 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 			if err := m._write(conn, websocket.TextMessage, message); err != nil {
 				return
 			}
+		case message := <-cli.Enqueue:
+			MessageQueue = append(MessageQueue, message)
+			clog.Info("HTTPServer", "Writer", "New message queued: (%d) - %s", len(message), message)
 		case <-ticker.C:
-			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
-			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
-				return
+			if len(MessageQueue) == 0 {
+				clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
+				if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
+					return
+				}
+			} else {
+				clog.Info("HTTPServer", "Writer", "Flushing queue")
+				for i, mess := range MessageQueue {
+					m._write(conn, websocket.TextMessage, mess)
+					MessageQueue[i] = nil
+				}
+				MessageQueue = MessageQueue[:0]
 			}
 		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
@@ -188,7 +205,8 @@ func (m *Manager) wsConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &hub.Client{Quit: make(chan bool),
-		CType: hub.ClientUndefined, Send: make(chan []byte, 256), CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
+		CType: hub.ClientUndefined, Send: make(chan []byte, 256), Enqueue: make(chan []byte, 256),
+		CallToAction: m.CallToAction, Addr: httpconn.RemoteAddr().String(),
 		Name: name, Content_id: 0, Front_id: "", App_id: "", Country: "", User_agent: ua}
 
 	m.Hub.Register <- client
