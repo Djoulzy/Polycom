@@ -20,7 +20,7 @@ const (
 	writeWait      = 5 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	timeStep       = time.Second // 100 * time.Millisecond // Actualisation 10 par seconde
+	timeStep       = 100 * time.Millisecond // Actualisation 10 par seconde
 	maxMessageSize = 512
 )
 
@@ -112,7 +112,7 @@ func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(pongWait))
-		clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
+		// clog.Debug("HTTPServer", "Reader", "PONG! from %s", cli.Name)
 		return nil
 	})
 	for {
@@ -157,10 +157,10 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 			}
 		case message := <-cli.Enqueue:
 			MessageQueue = append(MessageQueue, message)
-			clog.Info("HTTPServer", "Writer", "New message queued: (%d) - %s", len(message), message)
+			clog.Info("HTTPServer", "Writer", "New message queued: (%d) - %s", len(MessageQueue), message)
 		case <-ticker.C:
 			if len(MessageQueue) == 0 {
-				clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
+				// clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
 				if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
 					return
 				}
