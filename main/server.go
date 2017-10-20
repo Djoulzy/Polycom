@@ -10,6 +10,7 @@ import (
 	"github.com/Djoulzy/Polycom/nettools/tcpserver"
 	"github.com/Djoulzy/Polycom/storage"
 	"github.com/Djoulzy/Polycom/urlcrypt"
+	"github.com/Djoulzy/Polycom/world"
 
 	"github.com/Djoulzy/Tools/clog"
 	"github.com/Djoulzy/Tools/config"
@@ -120,5 +121,6 @@ func main() {
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
 	go TCPManager.Start(tcp_params)
 
+	go world.Start(zeHub)
 	zeHub.Run()
 }
