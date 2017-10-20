@@ -34,11 +34,11 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 			c.App_id = app_id
 			ScaleList.DispatchNewConnection(zeHub, c.Name)
 
-			message := []byte(fmt.Sprintf("[NUSR]%s", c.Name))
-			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
-			zeHub.Broadcast <- mess
-			message = []byte(fmt.Sprintf("[WLCM]%s", c.Name))
-			mess = hub.NewMessage(nil, hub.ClientUser, c, message)
+			// message := []byte(fmt.Sprintf("[NUSR]%s", c.Name))
+			// mess := hub.NewMessage(c, hub.ClientUser, nil, message)
+			// zeHub.Broadcast <- mess
+			message := []byte(fmt.Sprintf("[WLCM]%s", c.Name))
+			mess := hub.NewMessage(nil, hub.ClientUser, c, message)
 			zeHub.Unicast <- mess
 		}
 	} else {
