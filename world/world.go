@@ -77,8 +77,8 @@ func Start(zeHub *hub.Hub) {
 	for {
 		select {
 		case <-ticker.C:
-			// zeWorld.spawnMob()
-			// zeWorld.moveMob()
+			zeWorld.spawnMob()
+			zeWorld.moveMob()
 		}
 	}
 }

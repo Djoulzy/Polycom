@@ -3,6 +3,7 @@ package hub
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/Djoulzy/Tools/clog"
@@ -14,6 +15,7 @@ const (
 	ClientServer    = 2
 	ClientMonitor   = 3
 	Everybody       = 4
+	timeStep        = 100 * time.Millisecond // Actualisation 10 par seconde
 )
 
 var CTYpeName = [4]string{"Incomming", "Users", "Servers", "Monitors"}
@@ -50,6 +52,8 @@ type Message struct {
 	Dest     *Client
 	Content  []byte
 }
+
+var BroadcastQueue [][]byte
 
 type ConnModifier struct {
 	Client  *Client
@@ -181,16 +185,29 @@ func (h *Hub) Newrole(modif *ConnModifier) {
 }
 
 func (h *Hub) broadcast(message *Message) {
-	list := h.FullUsersList[message.UserType]
-	for _, client := range list {
-		if message.UserType == ClientUser {
-			client.Enqueue <- message.Content
-		}
-		select {
-		case client.Send <- message.Content:
+	if message.UserType == ClientUser {
+		BroadcastQueue = append(BroadcastQueue, message.Content)
+		clog.Info("Hub", "broadcast", "New message queued: (%d) - %s", len(BroadcastQueue), message.Content)
+	} else {
+		list := h.FullUsersList[message.UserType]
+		for _, client := range list {
+			client.Send <- message.Content
 			h.SentMessByTicks++
 		}
 	}
+}
+
+func (h *Hub) flushBroadcastQueue() {
+	list := h.FullUsersList[ClientUser]
+	for i, mess := range BroadcastQueue {
+		for _, client := range list {
+			client.Send <- mess
+			h.SentMessByTicks++
+		}
+		BroadcastQueue[i] = nil
+	}
+	BroadcastQueue = BroadcastQueue[:0]
+	clog.Info("Hub", "flushBroadcastQueue", "Queue flushed")
 }
 
 func (h *Hub) unicast(message *Message) {
@@ -205,8 +222,15 @@ func (h *Hub) action(message *Message) {
 }
 
 func (h *Hub) Run() {
+	ticker := time.NewTicker(timeStep)
+	defer func() {
+		ticker.Stop()
+	}()
+
 	for {
 		select {
+		case <-ticker.C:
+			h.flushBroadcastQueue()
 		case client := <-h.Register:
 			h.register(client)
 			// client.Consistent <- true

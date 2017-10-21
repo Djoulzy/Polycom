@@ -75,7 +75,7 @@ func main() {
 
 	zeHub = hub.NewHub()
 
-	Storage = storage.Init()
+	// Storage = storage.Init()
 
 	mon_params := &monitoring.Params{
 		ServerID:          conf.Name,

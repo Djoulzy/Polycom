@@ -20,7 +20,6 @@ const (
 	writeWait      = 5 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	timeStep       = 100 * time.Millisecond // Actualisation 10 par seconde
 	maxMessageSize = 512
 )
 
@@ -30,10 +29,6 @@ var (
 )
 
 var Upgrader *websocket.Upgrader
-
-type Message []byte
-
-var MessageQueue []Message
 
 type Manager struct {
 	Httpaddr         string
@@ -134,9 +129,9 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 }
 
 func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
-	ticker := time.NewTicker(timeStep)
+	// ticker := time.NewTicker(timeStep)
 	defer func() {
-		ticker.Stop()
+		// ticker.Stop()
 		conn.Close()
 	}()
 
@@ -155,23 +150,11 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 			if err := m._write(conn, websocket.TextMessage, message); err != nil {
 				return
 			}
-		case message := <-cli.Enqueue:
-			MessageQueue = append(MessageQueue, message)
-			clog.Info("HTTPServer", "Writer", "New message queued: (%d) - %s", len(MessageQueue), message)
-		case <-ticker.C:
-			if len(MessageQueue) == 0 {
-				// clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
-				if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
-					return
-				}
-			} else {
-				clog.Info("HTTPServer", "Writer", "Flushing queue")
-				for i, mess := range MessageQueue {
-					m._write(conn, websocket.TextMessage, mess)
-					MessageQueue[i] = nil
-				}
-				MessageQueue = MessageQueue[:0]
-			}
+		// case <-ticker.C:
+		// 	clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
+		// 	if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
+		// 		return
+		// 	}
 		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
 			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {
