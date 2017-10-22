@@ -129,9 +129,9 @@ func (m *Manager) _write(ws *websocket.Conn, mt int, message []byte) error {
 }
 
 func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
-	// ticker := time.NewTicker(timeStep)
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
-		// ticker.Stop()
+		ticker.Stop()
 		conn.Close()
 	}()
 
@@ -150,11 +150,11 @@ func (m *Manager) Writer(conn *websocket.Conn, cli *hub.Client) {
 			if err := m._write(conn, websocket.TextMessage, message); err != nil {
 				return
 			}
-		// case <-ticker.C:
-		// 	clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
-		// 	if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
-		// 		return
-		// 	}
+		case <-ticker.C:
+			clog.Debug("HTTPServer", "Writer", "Client %s Ping!", cli.Name)
+			if err := m._write(conn, websocket.PingMessage, []byte{}); err != nil {
+				return
+			}
 		case <-cli.Quit:
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "An other device is using your account !")
 			if err := m._write(conn, websocket.CloseMessage, cm); err != nil {

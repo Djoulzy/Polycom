@@ -25,6 +25,7 @@ var TCPManager tcpserver.Manager
 var ScaleList *scaling.ServersList
 var Storage *storage.Driver
 
+var zeWorld *world.WORLD
 var zeHub *hub.Hub
 
 func maxOpenFiles() int {
@@ -121,6 +122,8 @@ func main() {
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
 	go TCPManager.Start(tcp_params)
 
-	go world.Start(zeHub)
+	zeWorld = world.Init(zeHub)
+
+	go zeWorld.Run()
 	zeHub.Run()
 }

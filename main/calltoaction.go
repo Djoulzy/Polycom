@@ -111,6 +111,7 @@ func CallToAction(c *hub.Client, message []byte) {
 			fallthrough
 		case "[BCST]":
 			// clog.Trace("", "", "%s", message)
+			zeWorld.CallToAction(action_group)
 			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			zeHub.Broadcast <- mess
 			if c.CType != hub.ClientServer {

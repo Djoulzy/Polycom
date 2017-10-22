@@ -230,7 +230,9 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			h.flushBroadcastQueue()
+			if len(BroadcastQueue) > 0 {
+				h.flushBroadcastQueue()
+			}
 		case client := <-h.Register:
 			h.register(client)
 			// client.Consistent <- true
