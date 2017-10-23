@@ -2,7 +2,9 @@ package world
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
@@ -19,6 +21,7 @@ type MOB struct {
 	Type      string
 	Face      string
 	ComID     int
+	Dir       string
 	X         int
 	Y         int
 	Speed     int
@@ -30,8 +33,9 @@ type User struct {
 }
 
 type WORLD struct {
-	hub     *hub.Hub
-	MobList map[string]*MOB
+	hub      *hub.Hub
+	MobList  map[string]*MOB
+	UserList map[string]*User
 }
 
 func (W *WORLD) spawnMob() {
@@ -53,21 +57,67 @@ func (W *WORLD) spawnMob() {
 	}
 }
 
-func (W *WORLD) moveMob() {
+func (W *WORLD) findCloserUser(mob *MOB) (*User, error) {
+	var distFound float64 = 0
+	var userFound *User = nil
+	for _, player := range W.UserList {
+		largeur := math.Abs(float64(mob.X - player.X))
+		hauteur := math.Abs(float64(mob.Y - player.Y))
+		dist := math.Sqrt(math.Pow(largeur, 2) + math.Pow(hauteur, 2))
+		if dist > distFound {
+			userFound = player
+			distFound = dist
+		}
+	}
+	if userFound != nil {
+		return userFound, nil
+	} else {
+		return nil, errors.New("No prey")
+	}
+}
+
+func (W *WORLD) moveMob(mob *MOB) {
+	prey, err := W.findCloserUser(mob)
+	if err == nil {
+		clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
+		if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
+			if mob.Y > prey.Y {
+				mob.Y -= 32
+				mob.Dir = "up"
+			} else {
+				mob.Y += 32
+				mob.Dir = "down"
+			}
+		} else {
+			if mob.X > prey.X {
+				mob.X -= 32
+				mob.Dir = "left"
+			} else {
+				mob.X += 32
+				mob.Dir = "right"
+			}
+		}
+		message := []byte(fmt.Sprintf("[BCST]{\"type\":\"%s\",\"id\":\"%s\",\"face\":\"z1\",\"num\":%d,\"move\":\"%s\",\"speed\":\"%d\",\"x\":%d,\"y\":%d}", mob.ID, mob.Type, 1, mob.Dir, mob.Speed, mob.X, mob.Y))
+		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
+		W.hub.Broadcast <- mess
+		mob.waitState = mob.Speed
+	}
+}
+
+func (W *WORLD) browseMob() {
 	for _, mob := range W.MobList {
 		if mob.waitState <= 0 {
-			mob.X -= 32
-			message := []byte(fmt.Sprintf("[BCST]{\"type\":\"%s\",\"id\":\"%s\",\"face\":\"z1\",\"num\":%d,\"move\":\"%s\",\"speed\":\"%d\",\"x\":%d,\"y\":%d}", mob.ID, mob.Type, 1, "left", mob.Speed, mob.X, mob.Y))
-			mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
-			W.hub.Broadcast <- mess
-			mob.waitState = mob.Speed
+			W.moveMob(mob)
 		} else {
 			mob.waitState -= 1
 		}
 	}
 }
 
-func (W *WORLD) logUser(infos User) {
+func (W *WORLD) logUser(infos *User) {
+	if W.UserList[infos.ID] == nil {
+		W.UserList[infos.ID] = infos
+	}
 }
 
 func (W *WORLD) CallToAction(message []byte) {
@@ -75,7 +125,8 @@ func (W *WORLD) CallToAction(message []byte) {
 	err := json.Unmarshal(message, &infos)
 	if err == nil {
 		if infos.Type == "P" {
-			W.logUser(infos)
+			clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
+			W.logUser(&infos)
 		}
 	} else {
 		clog.Warn("World", "CallToAction", "%s", err)
@@ -92,7 +143,7 @@ func (W *WORLD) Run() {
 		select {
 		case <-ticker.C:
 			W.spawnMob()
-			W.moveMob()
+			W.browseMob()
 		}
 	}
 }
@@ -100,6 +151,7 @@ func (W *WORLD) Run() {
 func Init(zeHub *hub.Hub) *WORLD {
 	zeWorld := &WORLD{}
 	zeWorld.MobList = make(map[string]*MOB)
+	zeWorld.UserList = make(map[string]*User)
 	zeWorld.hub = zeHub
 
 	return zeWorld
