@@ -41,17 +41,17 @@ type WORLD struct {
 
 func (W *WORLD) spawnMob() {
 	if len(W.MobList) < 1 {
-		rand.Seed(int64(len(W.MobList)))
-		// face := fmt.Sprintf("%d", rand.Intn(8))
+		rand.Seed(time.Now().UnixNano())
+		face := fmt.Sprintf("%d", rand.Intn(8))
 		uid, _ := uuid.NewV4()
 		mob := &MOB{
 			ID:        uid.String(),
 			Type:      "M",
-			Face:      "2",
+			Face:      face,
 			ComID:     1,
 			X:         8 * 32,
 			Y:         5 * 32,
-			Speed:     8,
+			Speed:     16,
 			waitState: 0,
 		}
 		W.MobList[mob.ID] = mob
