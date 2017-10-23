@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
@@ -17,14 +18,14 @@ const (
 )
 
 type MOB struct {
-	ID        string
-	Type      string
-	Face      string
-	ComID     int
-	Dir       string
-	X         int
-	Y         int
-	Speed     int
+	ID        string `bson:"id" json:"id"`
+	Type      string `bson:"type" json:"type"`
+	Face      string `bson:"face" json:"face"`
+	ComID     int    `bson:"num" json:"num"`
+	Dir       string `bson:"move" json:"move"`
+	X         int    `bson:"x" json:"x"`
+	Y         int    `bson:"y" json:"y"`
+	Speed     int    `bson:"speed" json:"speed"`
 	waitState int
 }
 
@@ -40,13 +41,17 @@ type WORLD struct {
 
 func (W *WORLD) spawnMob() {
 	if len(W.MobList) < 1 {
+		rand.Seed(int64(len(W.MobList)))
+		// face := fmt.Sprintf("%d", rand.Intn(8))
 		uid, _ := uuid.NewV4()
 		mob := &MOB{
 			ID:        uid.String(),
 			Type:      "M",
+			Face:      "2",
+			ComID:     1,
 			X:         8 * 32,
 			Y:         5 * 32,
-			Speed:     50,
+			Speed:     8,
 			waitState: 0,
 		}
 		W.MobList[mob.ID] = mob
@@ -97,7 +102,8 @@ func (W *WORLD) moveMob(mob *MOB) {
 				mob.Dir = "right"
 			}
 		}
-		message := []byte(fmt.Sprintf("[BCST]{\"type\":\"%s\",\"id\":\"%s\",\"face\":\"z1\",\"num\":%d,\"move\":\"%s\",\"speed\":\"%d\",\"x\":%d,\"y\":%d}", mob.ID, mob.Type, 1, mob.Dir, mob.Speed, mob.X, mob.Y))
+		json, _ := json.Marshal(mob)
+		message := []byte(fmt.Sprintf("[BCST]%s", json))
 		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
 		W.hub.Broadcast <- mess
 		mob.waitState = mob.Speed
