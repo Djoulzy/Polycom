@@ -64,7 +64,7 @@ func (W *WORLD) findCloserUser(mob *MOB) (*User, error) {
 		largeur := math.Abs(float64(mob.X - player.X))
 		hauteur := math.Abs(float64(mob.Y - player.Y))
 		dist := math.Sqrt(math.Pow(largeur, 2) + math.Pow(hauteur, 2))
-		if dist > distFound {
+		if dist < distFound || distFound == 0 {
 			userFound = player
 			distFound = dist
 		}
@@ -124,9 +124,12 @@ func (W *WORLD) CallToAction(message []byte) {
 	var infos User
 	err := json.Unmarshal(message, &infos)
 	if err == nil {
-		if infos.Type == "P" {
+		if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
 			clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
-			W.logUser(&infos)
+			W.UserList[infos.ID] = &infos
+		} else {
+			W.UserList[infos.ID].X = infos.X
+			W.UserList[infos.ID].Y = infos.Y
 		}
 	} else {
 		clog.Warn("World", "CallToAction", "%s", err)
