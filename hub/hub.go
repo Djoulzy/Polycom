@@ -47,6 +47,7 @@ type Client struct {
 }
 
 type Message struct {
+	Level    int
 	From     *Client
 	UserType int
 	Dest     *Client
@@ -104,6 +105,7 @@ func NewHub() *Hub {
 
 func NewMessage(from *Client, userType int, c *Client, content []byte) *Message {
 	m := &Message{
+		Level:    1,
 		From:     from,
 		UserType: userType,
 		Dest:     c,

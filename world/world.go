@@ -25,6 +25,7 @@ type MOB struct {
 	Dir       string `bson:"move" json:"move"`
 	X         int    `bson:"x" json:"x"`
 	Y         int    `bson:"y" json:"y"`
+	Pow       int    `bson:"pow" json:"pow"`
 	Speed     int    `bson:"speed" json:"speed"`
 	waitState int
 }
@@ -40,7 +41,7 @@ type WORLD struct {
 }
 
 func (W *WORLD) spawnMob() {
-	if len(W.MobList) < 1 {
+	if len(W.MobList) < 5 {
 		rand.Seed(time.Now().UnixNano())
 		face := fmt.Sprintf("%d", rand.Intn(8))
 		uid, _ := uuid.NewV4()
@@ -49,8 +50,8 @@ func (W *WORLD) spawnMob() {
 			Type:      "M",
 			Face:      face,
 			ComID:     1,
-			X:         8 * 32,
-			Y:         5 * 32,
+			X:         rand.Intn(30) * 32,
+			Y:         rand.Intn(20) * 32,
 			Speed:     16,
 			waitState: 0,
 		}
@@ -126,16 +127,74 @@ func (W *WORLD) logUser(infos *User) {
 	}
 }
 
-func (W *WORLD) CallToAction(message []byte) {
+func (W *WORLD) checkTargetHit(infos *User) {
+	distFound := infos.Pow + 1
+	mobFound := ""
+	switch infos.Dir {
+	case "up":
+		for _, mob := range W.MobList {
+			if (mob.X == infos.X) && (mob.Y < infos.Y) {
+				dist := infos.Y - mob.Y
+				if dist <= distFound {
+					distFound = dist
+					mobFound = mob.ID
+				}
+			}
+		}
+	case "down":
+		for _, mob := range W.MobList {
+			if (mob.X == infos.X) && (mob.Y > infos.Y) {
+				dist := mob.Y - infos.Y
+				if dist <= distFound {
+					distFound = dist
+					mobFound = mob.ID
+				}
+			}
+		}
+	case "left":
+		for _, mob := range W.MobList {
+			if (mob.Y == infos.Y) && (mob.X < infos.X) {
+				dist := infos.X - mob.X
+				if dist <= distFound {
+					distFound = dist
+					mobFound = mob.ID
+				}
+			}
+		}
+	case "right":
+		for _, mob := range W.MobList {
+			if (mob.Y == infos.Y) && (mob.X > infos.X) {
+				dist := mob.X - infos.X
+				if dist <= distFound {
+					distFound = dist
+					mobFound = mob.ID
+				}
+			}
+		}
+	}
+	if mobFound != "" {
+		message := []byte(fmt.Sprintf("[KILL]%s", mobFound))
+		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
+		W.hub.Broadcast <- mess
+		delete(W.MobList, mobFound)
+	}
+}
+
+func (W *WORLD) CallToAction(cmd string, message []byte) {
 	var infos User
 	err := json.Unmarshal(message, &infos)
 	if err == nil {
-		if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
-			clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
-			W.UserList[infos.ID] = &infos
-		} else {
-			W.UserList[infos.ID].X = infos.X
-			W.UserList[infos.ID].Y = infos.Y
+		switch cmd {
+		case "[FIRE]":
+			W.checkTargetHit(&infos)
+		case "[BCST]":
+			if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
+				clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
+				W.UserList[infos.ID] = &infos
+			} else {
+				W.UserList[infos.ID].X = infos.X
+				W.UserList[infos.ID].Y = infos.Y
+			}
 		}
 	} else {
 		clog.Warn("World", "CallToAction", "%s", err)
