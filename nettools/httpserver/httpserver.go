@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -226,12 +227,23 @@ func (m *Manager) Start(conf *Manager) {
 	fs := http.FileServer(http.Dir("../html/js"))
 	http.Handle("/js/", http.StripPrefix("/js/", fs))
 
+	http.HandleFunc("/data/", func(w http.ResponseWriter, r *http.Request) {
+		name := ".." + r.URL.Path
+		file, err := os.Open(name)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		http.ServeContent(w, r, name, time.Now(), file)
+	})
+
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
 
 	handler := http.HandlerFunc(m.wsConnect)
 	http.Handle("/ws", throttleClients(handler, m.NBAcceptBySecond))
-	// http.HandleFunc("/ws", m.wsConnect)
 
 	err := http.ListenAndServe(m.Httpaddr, nil)
 	if err != nil {

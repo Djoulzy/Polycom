@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
 	"time"
@@ -39,6 +40,19 @@ type WORLD struct {
 	MobList  map[string]*MOB
 	UserList map[string]*User
 }
+
+type FILELAYER struct {
+	Data   []int  `bson:"data" json:"data"`
+	Name   string `bson:"name" json:"name"`
+	Width  int    `bson:"width" json:"width"`
+	Height int    `bson:"height" json:"height"`
+}
+
+type FILEMAP struct {
+	Layers []FILELAYER `bson:"layers" json:"layers"`
+}
+
+type MAP [][]int
 
 func (W *WORLD) spawnMob() {
 	if len(W.MobList) < 5 {
@@ -216,11 +230,29 @@ func (W *WORLD) Run() {
 	}
 }
 
+func (W *WORLD) loadMap(file string) {
+	var zemap FILEMAP
+	dat, _ := ioutil.ReadFile(file)
+	err := json.Unmarshal(dat, &zemap)
+	if err != nil {
+		clog.Error("", "", "%s", err)
+	}
+	width := zemap.Layers[2].Width
+	height := zemap.Layers[2].Height
+	loaded := [width][height]int
+	i, j := 0, 0
+	for index, val := range zemap.Layers[2].Data {
+
+	}
+}
+
 func Init(zeHub *hub.Hub) *WORLD {
 	zeWorld := &WORLD{}
 	zeWorld.MobList = make(map[string]*MOB)
 	zeWorld.UserList = make(map[string]*User)
 	zeWorld.hub = zeHub
+
+	zeWorld.loadMap("../data/zone1.json")
 
 	return zeWorld
 }
