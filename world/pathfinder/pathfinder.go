@@ -1,5 +1,5 @@
 //pathfinding package implements pathfinding algorithms such as Dijkstra and A*
-package pathfinding
+package pathfinder
 
 import (
 	"fmt"
@@ -8,10 +8,10 @@ import (
 //Defining possible graph elements
 const (
 	UNKNOWN int = iota - 1
-	LAND
+	LAND    int = 0
 	WALL
-	START
-	STOP
+	START int = 1000
+	STOP  int = 2000
 )
 
 type MapData [][]int

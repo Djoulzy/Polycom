@@ -7,15 +7,19 @@ import (
 	"io/ioutil"
 	"math"
 	"math/rand"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/world/pathfinder"
 	"github.com/Djoulzy/Tools/clog"
 	"github.com/nu7hatch/gouuid"
 )
 
 const (
 	timeStep = 100 * time.Millisecond // Actualisation 10 par seconde
+	tileSize = 32
 )
 
 type MOB struct {
@@ -39,6 +43,7 @@ type WORLD struct {
 	hub      *hub.Hub
 	MobList  map[string]*MOB
 	UserList map[string]*User
+	Map      pathfinder.MapData
 }
 
 type FILELAYER struct {
@@ -52,8 +57,6 @@ type FILEMAP struct {
 	Layers []FILELAYER `bson:"layers" json:"layers"`
 }
 
-type MAP [][]int
-
 func (W *WORLD) spawnMob() {
 	if len(W.MobList) < 5 {
 		rand.Seed(time.Now().UnixNano())
@@ -64,8 +67,8 @@ func (W *WORLD) spawnMob() {
 			Type:      "M",
 			Face:      face,
 			ComID:     1,
-			X:         rand.Intn(30) * 32,
-			Y:         rand.Intn(20) * 32,
+			X:         rand.Intn(30),
+			Y:         rand.Intn(20),
 			Speed:     16,
 			waitState: 0,
 		}
@@ -102,18 +105,18 @@ func (W *WORLD) moveMob(mob *MOB) {
 		clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
 		if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
 			if mob.Y > prey.Y {
-				mob.Y -= 32
+				mob.Y -= 1
 				mob.Dir = "up"
 			} else {
-				mob.Y += 32
+				mob.Y += 1
 				mob.Dir = "down"
 			}
 		} else {
 			if mob.X > prey.X {
-				mob.X -= 32
+				mob.X -= 1
 				mob.Dir = "left"
 			} else {
-				mob.X += 32
+				mob.X += 1
 				mob.Dir = "right"
 			}
 		}
@@ -215,6 +218,45 @@ func (W *WORLD) CallToAction(cmd string, message []byte) {
 	}
 }
 
+func (W *WORLD) DrawMap() {
+	cmd := exec.Command("clear") //Linux example, its tested
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+	visuel := ""
+	display := "*"
+	for y, row := range W.Map {
+		// display = fmt.Sprintf("*%s", display)
+		for x, val := range row {
+			if val == 0 {
+				visuel = "   "
+			} else if val == -1 {
+				visuel = clog.GetColoredString(" + ", "black", "green")
+			} else if val == 1000 {
+				visuel = clog.GetColoredString(" D ", "black", "yellow")
+			} else if val == 2000 {
+				visuel = clog.GetColoredString(" F ", "white", "blue")
+			} else {
+				visuel = clog.GetColoredString(" X ", "white", "white")
+			}
+			for _, mob := range W.MobList {
+				if mob.X == x && mob.Y == y {
+					visuel = clog.GetColoredString(" Z ", "white", "red")
+					break
+				}
+			}
+			for _, user := range W.UserList {
+				if user.X == x && user.Y == y {
+					visuel = clog.GetColoredString(" P ", "black", "green")
+					break
+				}
+			}
+			display = fmt.Sprintf("%s%s", display, visuel)
+		}
+		display = fmt.Sprintf("%s*\n*", display)
+	}
+	fmt.Printf("%s", display)
+}
+
 func (W *WORLD) Run() {
 	ticker := time.NewTicker(timeStep)
 	defer func() {
@@ -226,6 +268,9 @@ func (W *WORLD) Run() {
 		case <-ticker.C:
 			W.spawnMob()
 			W.browseMob()
+			if clog.LogLevel == 0 {
+				W.DrawMap()
+			}
 		}
 	}
 }
@@ -237,25 +282,33 @@ func (W *WORLD) loadMap(file string) {
 	if err != nil {
 		clog.Error("", "", "%s", err)
 	}
-	// width := zemap.Layers[2].Width
-	// height := zemap.Layers[2].Height
-	// loaded := [width][height]int
+
+	width := zemap.Layers[2].Width
+	height := zemap.Layers[2].Height
+	W.Map = make(pathfinder.MapData, width)
+	for i := 0; i < width; i++ {
+		W.Map[i] = make([]int, height)
+	}
+
 	y := 0
-	val := ""
-	// for index, val := range zemap.Layers[2].Data {
-	for y < zemap.Layers[2].Height {
+	for y < height {
 		x := 0
-		for x < zemap.Layers[2].Width {
-			if zemap.Layers[2].Data[(y*zemap.Layers[2].Width)+x] > 0 {
-				val = " X "
-			} else {
-				val = " . "
-			}
-			fmt.Printf("%s", val)
+		for x < width {
+			W.Map[y][x] = zemap.Layers[2].Data[(y*width)+x]
 			x++
 		}
-		fmt.Printf("\n")
 		y++
+	}
+}
+
+func (W *WORLD) testPathFinder() {
+	W.Map[1][1] = 1000
+	W.Map[11][50] = 2000
+	graph := pathfinder.NewGraph(&W.Map)
+	shortest_path := pathfinder.Astar(graph)
+	for _, path := range shortest_path {
+		fmt.Printf("%s\n", path.X)
+		W.Map[path.X][path.Y] = -1
 	}
 }
 
@@ -267,5 +320,7 @@ func Init(zeHub *hub.Hub) *WORLD {
 
 	zeWorld.loadMap("../data/zone1.json")
 
+	zeWorld.testPathFinder()
+	// clog.Fatal("", "", nil)
 	return zeWorld
 }
