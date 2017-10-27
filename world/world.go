@@ -237,12 +237,25 @@ func (W *WORLD) loadMap(file string) {
 	if err != nil {
 		clog.Error("", "", "%s", err)
 	}
-	width := zemap.Layers[2].Width
-	height := zemap.Layers[2].Height
-	loaded := [width][height]int
-	i, j := 0, 0
-	for index, val := range zemap.Layers[2].Data {
-
+	// width := zemap.Layers[2].Width
+	// height := zemap.Layers[2].Height
+	// loaded := [width][height]int
+	y := 0
+	val := ""
+	// for index, val := range zemap.Layers[2].Data {
+	for y < zemap.Layers[2].Height {
+		x := 0
+		for x < zemap.Layers[2].Width {
+			if zemap.Layers[2].Data[(y*zemap.Layers[2].Width)+x] > 0 {
+				val = " X "
+			} else {
+				val = " . "
+			}
+			fmt.Printf("%s", val)
+			x++
+		}
+		fmt.Printf("\n")
+		y++
 	}
 }
 
