@@ -1,10 +1,6 @@
 //pathfinding package implements pathfinding algorithms such as Dijkstra and A*
 package pathfinder
 
-import (
-	"fmt"
-)
-
 //Defining possible graph elements
 const (
 	UNKNOWN int = iota - 1
@@ -47,9 +43,9 @@ func NewNode(x, y int) *Node {
 }
 
 //Return string representation of the node
-func (self *Node) String() string {
-	return fmt.Sprintf("<Node X:%d Y:%d addr:%d>", self.X, self.Y, &self)
-}
+// func (self *Node) String() string {
+// 	return fmt.Sprintf("<Node X:%d Y:%d addr:%d>", self.X, self.Y, &self)
+// }
 
 //Start, end nodes and a slice of nodes
 type Graph struct {
@@ -59,20 +55,20 @@ type Graph struct {
 }
 
 //Return a Graph from a map of coordinates (those that are passible)
-func NewGraph(map_data *MapData) *Graph {
+func NewGraph(map_data *MapData, startx, starty, stopx, stopy int) *Graph {
 	var start, stop *Node
 	var nodes []*Node
-	for i, row := range *map_data {
-		for j, _type := range row {
-			if _type == START || _type == STOP {
-				node := NewNode(i, j)
+	for y, row := range *map_data {
+		for x, _ := range row {
+			if y == starty && x == startx {
+				node := NewNode(x, y)
 				nodes = append(nodes, node)
-				if _type == START {
-					start = node
-				}
-				if _type == STOP {
-					stop = node
-				}
+				start = node
+			}
+			if y == stopy && x == stopx {
+				node := NewNode(x, y)
+				nodes = append(nodes, node)
+				stop = node
 			}
 		}
 	}
