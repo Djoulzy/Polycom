@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	timeStep = 100 * time.Millisecond // Actualisation 10 par seconde
-	tileSize = 32
+	timeStep  = 100 * time.Millisecond // Actualisation 10 par seconde
+	tileSize  = 32
+	mobSpeed  = 8
+	maxMobNum = 100
 )
 
 type MOB struct {
@@ -41,7 +43,10 @@ type WORLD struct {
 	hub      *hub.Hub
 	MobList  map[string]*MOB
 	UserList map[string]*User
+	Width    int
+	Height   int
 	Map      pathfinder.MapData
+	UserMap  pathfinder.MapData
 	Graph    *pathfinder.Graph
 }
 
@@ -56,8 +61,18 @@ type FILEMAP struct {
 	Layers []FILELAYER `bson:"layers" json:"layers"`
 }
 
+func (W *WORLD) findSpawnPlace() (int, int) {
+	for {
+		x := rand.Intn(W.Width)
+		y := rand.Intn(W.Height)
+		if W.tileIsFree(x, y) {
+			return x, y
+		}
+	}
+}
+
 func (W *WORLD) spawnMob() {
-	if len(W.MobList) < 100 {
+	if len(W.MobList) < maxMobNum {
 		rand.Seed(time.Now().UnixNano())
 		face := fmt.Sprintf("%d", rand.Intn(8))
 		uid, _ := uuid.NewV4()
@@ -66,11 +81,11 @@ func (W *WORLD) spawnMob() {
 			Type:      "M",
 			Face:      face,
 			ComID:     1,
-			X:         rand.Intn(30),
-			Y:         rand.Intn(20),
-			Speed:     16,
+			Speed:     mobSpeed,
 			waitState: 0,
 		}
+		mob.X, mob.Y = W.findSpawnPlace()
+		W.UserMap[mob.X][mob.Y] = 1
 		W.MobList[mob.ID] = mob
 		message := []byte(fmt.Sprintf("[NMOB]%s", mob.ID))
 		clog.Info("WORLD", "spawnMob", "Spawning new mob %s", mob.ID)
@@ -86,6 +101,9 @@ func (W *WORLD) findCloserUser(mob *MOB) (*User, error) {
 		largeur := math.Abs(float64(mob.X - player.X))
 		hauteur := math.Abs(float64(mob.Y - player.Y))
 		dist := math.Sqrt(math.Pow(largeur, 2) + math.Pow(hauteur, 2))
+		// if dist > 10 {
+		// 	continue
+		// }
 		if dist == 0 {
 			return nil, errors.New("Prey Catch")
 		}
@@ -109,26 +127,48 @@ func (W *WORLD) sendMobPos(mob *MOB) {
 	mob.waitState = mob.Speed
 }
 
+func (W *WORLD) tileIsFree(x, y int) bool {
+	if W.Map[x][y]+W.UserMap[x][y] == 0 {
+		return true
+	}
+	return false
+}
+
 func (W *WORLD) moveSIMPLE(mob *MOB, prey *User) {
 	clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
-	if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
-		if mob.Y > prey.Y {
-			mob.Y -= 1
-			mob.Dir = "up"
-		} else {
-			mob.Y += 1
-			mob.Dir = "down"
-		}
-	} else {
-		if mob.X > prey.X {
-			mob.X -= 1
-			mob.Dir = "left"
-		} else {
-			mob.X += 1
-			mob.Dir = "right"
-		}
+	// if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
+	if mob.Y > prey.Y && W.tileIsFree(mob.X, mob.Y-1) {
+		W.UserMap[mob.X][mob.Y] = 0
+		mob.Y -= 1
+		mob.Dir = "up"
+		W.sendMobPos(mob)
+		W.UserMap[mob.X][mob.Y] = 1
+		return
 	}
-	W.sendMobPos(mob)
+	if mob.Y < prey.Y && W.tileIsFree(mob.X, mob.Y+1) {
+		W.UserMap[mob.X][mob.Y] = 0
+		mob.Y += 1
+		mob.Dir = "down"
+		W.sendMobPos(mob)
+		W.UserMap[mob.X][mob.Y] = 1
+		return
+	}
+	if mob.X > prey.X && W.tileIsFree(mob.X-1, mob.Y) {
+		W.UserMap[mob.X][mob.Y] = 0
+		mob.X -= 1
+		mob.Dir = "left"
+		W.sendMobPos(mob)
+		W.UserMap[mob.X][mob.Y] = 1
+		return
+	}
+	if mob.X < prey.X && W.tileIsFree(mob.X+1, mob.Y) {
+		W.UserMap[mob.X][mob.Y] = 0
+		mob.X += 1
+		mob.Dir = "right"
+		W.sendMobPos(mob)
+		W.UserMap[mob.X][mob.Y] = 1
+		return
+	}
 }
 
 func (W *WORLD) moveASTAR(mob *MOB, prey *User) {
@@ -171,6 +211,7 @@ func (W *WORLD) browseMob() {
 func (W *WORLD) logUser(infos *User) {
 	if W.UserList[infos.ID] == nil {
 		W.UserList[infos.ID] = infos
+		W.UserMap[infos.X][infos.Y] = 100
 	}
 }
 
@@ -238,9 +279,13 @@ func (W *WORLD) CallToAction(cmd string, message []byte) {
 			if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
 				clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
 				W.UserList[infos.ID] = &infos
+				W.UserMap[infos.X][infos.Y] = 100
 			} else {
-				W.UserList[infos.ID].X = infos.X
-				W.UserList[infos.ID].Y = infos.Y
+				user := W.UserList[infos.ID]
+				W.UserMap[user.X][user.Y] = 0
+				user.X = infos.X
+				user.Y = infos.Y
+				W.UserMap[user.X][user.Y] = 100
 			}
 		}
 	} else {
@@ -252,8 +297,8 @@ func (W *WORLD) DrawMap() {
 	fmt.Printf("%c[H", 27)
 	visuel := ""
 	display := "*"
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
+	for y := 0; y < W.Height; y++ {
+		for x := 0; x < W.Width; x++ {
 			val := W.Map[x][y]
 			if val == 0 {
 				visuel = "   "
@@ -266,18 +311,24 @@ func (W *WORLD) DrawMap() {
 			} else {
 				visuel = clog.GetColoredString(" X ", "white", "white")
 			}
-			for _, mob := range W.MobList {
-				if mob.X == x && mob.Y == y {
-					visuel = clog.GetColoredString(" Z ", "white", "red")
-					break
-				}
+			val = W.UserMap[x][y]
+			if val == 1 {
+				visuel = clog.GetColoredString(" Z ", "white", "red")
+			} else if val == 100 {
+				visuel = clog.GetColoredString(" P ", "black", "yellow")
 			}
-			for _, user := range W.UserList {
-				if user.X == x && user.Y == y {
-					visuel = clog.GetColoredString(" P ", "black", "yellow")
-					break
-				}
-			}
+			// for _, mob := range W.MobList {
+			// 	if mob.X == x && mob.Y == y {
+			// 		visuel = clog.GetColoredString(" Z ", "white", "red")
+			// 		break
+			// 	}
+			// }
+			// for _, user := range W.UserList {
+			// 	if user.X == x && user.Y == y {
+			// 		visuel = clog.GetColoredString(" P ", "black", "yellow")
+			// 		break
+			// 	}
+			// }
 			display = fmt.Sprintf("%s%s", display, visuel)
 		}
 		display = fmt.Sprintf("%s*\n*", display)
@@ -320,18 +371,22 @@ func (W *WORLD) loadMap(file string) {
 		clog.Error("", "", "%s", err)
 	}
 
-	width := zemap.Layers[2].Width
-	height := zemap.Layers[2].Height
-	W.Map = make(pathfinder.MapData, width)
-	for i := 0; i < width; i++ {
-		W.Map[i] = make([]int, height)
+	W.Width = zemap.Layers[2].Width
+	W.Height = zemap.Layers[2].Height
+
+	W.Map = make(pathfinder.MapData, W.Width)
+	W.UserMap = make(pathfinder.MapData, W.Width)
+	for i := 0; i < W.Width; i++ {
+		W.UserMap[i] = make([]int, W.Height)
+		W.Map[i] = make([]int, W.Height)
 	}
 
 	row := 0
-	for row < height {
+	for row < W.Height {
 		col := 0
-		for col < width {
-			W.Map[col][row] = zemap.Layers[2].Data[(row*width)+col]
+		for col < W.Width {
+			W.Map[col][row] = zemap.Layers[2].Data[(row*W.Width)+col]
+			W.UserMap[col][row] = 0
 			col++
 		}
 		row++
