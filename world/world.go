@@ -35,18 +35,19 @@ type MOB struct {
 	waitState int
 }
 
-type User struct {
-	MOB
+type TILE struct {
+	Type int
+	ID   string
 }
 
 type WORLD struct {
 	hub      *hub.Hub
 	MobList  map[string]*MOB
-	UserList map[string]*User
+	UserList map[string]*MOB
 	Width    int
 	Height   int
 	Map      pathfinder.MapData
-	UserMap  pathfinder.MapData
+	UserMap  [][]*MOB
 	Graph    *pathfinder.Graph
 }
 
@@ -85,7 +86,7 @@ func (W *WORLD) spawnMob() {
 			waitState: 0,
 		}
 		mob.X, mob.Y = W.findSpawnPlace()
-		W.UserMap[mob.X][mob.Y] = 1
+		W.UserMap[mob.X][mob.Y] = mob
 		W.MobList[mob.ID] = mob
 		message := []byte(fmt.Sprintf("[NMOB]%s", mob.ID))
 		clog.Info("WORLD", "spawnMob", "Spawning new mob %s", mob.ID)
@@ -94,16 +95,16 @@ func (W *WORLD) spawnMob() {
 	}
 }
 
-func (W *WORLD) findCloserUser(mob *MOB) (*User, error) {
+func (W *WORLD) findCloserUser(mob *MOB) (*MOB, error) {
 	var distFound float64 = 0
-	var userFound *User = nil
+	var userFound *MOB = nil
 	for _, player := range W.UserList {
 		largeur := math.Abs(float64(mob.X - player.X))
 		hauteur := math.Abs(float64(mob.Y - player.Y))
 		dist := math.Sqrt(math.Pow(largeur, 2) + math.Pow(hauteur, 2))
-		// if dist > 10 {
-		// 	continue
-		// }
+		if dist > 20 {
+			continue
+		}
 		if dist == 0 {
 			return nil, errors.New("Prey Catch")
 		}
@@ -128,50 +129,50 @@ func (W *WORLD) sendMobPos(mob *MOB) {
 }
 
 func (W *WORLD) tileIsFree(x, y int) bool {
-	if W.Map[x][y]+W.UserMap[x][y] == 0 {
+	if W.Map[x][y] == 0 && W.UserMap[x][y] == nil {
 		return true
 	}
 	return false
 }
 
-func (W *WORLD) moveSIMPLE(mob *MOB, prey *User) {
+func (W *WORLD) moveSIMPLE(mob *MOB, prey *MOB) {
 	clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
 	// if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
 	if mob.Y > prey.Y && W.tileIsFree(mob.X, mob.Y-1) {
-		W.UserMap[mob.X][mob.Y] = 0
+		W.UserMap[mob.X][mob.Y] = nil
 		mob.Y -= 1
 		mob.Dir = "up"
 		W.sendMobPos(mob)
-		W.UserMap[mob.X][mob.Y] = 1
+		W.UserMap[mob.X][mob.Y] = mob
 		return
 	}
 	if mob.Y < prey.Y && W.tileIsFree(mob.X, mob.Y+1) {
-		W.UserMap[mob.X][mob.Y] = 0
+		W.UserMap[mob.X][mob.Y] = nil
 		mob.Y += 1
 		mob.Dir = "down"
 		W.sendMobPos(mob)
-		W.UserMap[mob.X][mob.Y] = 1
+		W.UserMap[mob.X][mob.Y] = mob
 		return
 	}
 	if mob.X > prey.X && W.tileIsFree(mob.X-1, mob.Y) {
-		W.UserMap[mob.X][mob.Y] = 0
+		W.UserMap[mob.X][mob.Y] = nil
 		mob.X -= 1
 		mob.Dir = "left"
 		W.sendMobPos(mob)
-		W.UserMap[mob.X][mob.Y] = 1
+		W.UserMap[mob.X][mob.Y] = mob
 		return
 	}
 	if mob.X < prey.X && W.tileIsFree(mob.X+1, mob.Y) {
-		W.UserMap[mob.X][mob.Y] = 0
+		W.UserMap[mob.X][mob.Y] = nil
 		mob.X += 1
 		mob.Dir = "right"
 		W.sendMobPos(mob)
-		W.UserMap[mob.X][mob.Y] = 1
+		W.UserMap[mob.X][mob.Y] = mob
 		return
 	}
 }
 
-func (W *WORLD) moveASTAR(mob *MOB, prey *User) {
+func (W *WORLD) moveASTAR(mob *MOB, prey *MOB) {
 	node := W.getShortPath(mob, prey)
 	if node != nil {
 		clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
@@ -208,68 +209,56 @@ func (W *WORLD) browseMob() {
 	}
 }
 
-func (W *WORLD) logUser(infos *User) {
+func (W *WORLD) logUser(infos *MOB) {
 	if W.UserList[infos.ID] == nil {
 		W.UserList[infos.ID] = infos
-		W.UserMap[infos.X][infos.Y] = 100
+		W.UserMap[infos.X][infos.Y] = infos
 	}
 }
 
-func (W *WORLD) checkTargetHit(infos *User) {
-	distFound := infos.Pow + 1
-	mobFound := ""
+func (W *WORLD) checkTargetHit(infos *MOB) {
+	var mobFound *MOB
 	switch infos.Dir {
 	case "up":
-		for _, mob := range W.MobList {
-			if (mob.X == infos.X) && (mob.Y < infos.Y) {
-				dist := infos.Y - mob.Y
-				if dist <= distFound {
-					distFound = dist
-					mobFound = mob.ID
-				}
+		for y := infos.Y - 1; y > infos.Y-infos.Pow; y-- {
+			if W.UserMap[infos.X][y] != nil {
+				mobFound = W.UserMap[infos.X][y]
+				break
 			}
 		}
 	case "down":
-		for _, mob := range W.MobList {
-			if (mob.X == infos.X) && (mob.Y > infos.Y) {
-				dist := mob.Y - infos.Y
-				if dist <= distFound {
-					distFound = dist
-					mobFound = mob.ID
-				}
+		for y := infos.Y + 1; y < infos.Y+infos.Pow; y++ {
+			if W.UserMap[infos.X][y] != nil {
+				mobFound = W.UserMap[infos.X][y]
+				break
 			}
 		}
 	case "left":
-		for _, mob := range W.MobList {
-			if (mob.Y == infos.Y) && (mob.X < infos.X) {
-				dist := infos.X - mob.X
-				if dist <= distFound {
-					distFound = dist
-					mobFound = mob.ID
-				}
+		for x := infos.X - 1; x > infos.X-infos.Pow; x-- {
+			if W.UserMap[x][infos.Y] != nil {
+				mobFound = W.UserMap[x][infos.Y]
+				break
 			}
 		}
 	case "right":
-		for _, mob := range W.MobList {
-			if (mob.Y == infos.Y) && (mob.X > infos.X) {
-				dist := mob.X - infos.X
-				if dist <= distFound {
-					distFound = dist
-					mobFound = mob.ID
-				}
+		for x := infos.X + 1; x < infos.X+infos.Pow; x++ {
+			if W.UserMap[x][infos.Y] != nil {
+				mobFound = W.UserMap[x][infos.Y]
+				break
 			}
 		}
 	}
-	if mobFound != "" {
-		message := []byte(fmt.Sprintf("[KILL]%s", mobFound))
+	if mobFound != nil {
+		message := []byte(fmt.Sprintf("[KILL]%s", mobFound.ID))
 		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
 		W.hub.Broadcast <- mess
-		delete(W.MobList, mobFound)
+		delete(W.MobList, mobFound.ID)
+		W.UserMap[mobFound.X][mobFound.Y] = nil
 	}
 }
 
 func (W *WORLD) CallToAction(cmd string, message []byte) {
-	var infos User
+	var infos MOB
 	err := json.Unmarshal(message, &infos)
 	if err == nil {
 		switch cmd {
@@ -279,13 +268,13 @@ func (W *WORLD) CallToAction(cmd string, message []byte) {
 			if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
 				clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
 				W.UserList[infos.ID] = &infos
-				W.UserMap[infos.X][infos.Y] = 100
+				W.UserMap[infos.X][infos.Y] = &infos
 			} else {
 				user := W.UserList[infos.ID]
-				W.UserMap[user.X][user.Y] = 0
+				W.UserMap[user.X][user.Y] = nil
 				user.X = infos.X
 				user.Y = infos.Y
-				W.UserMap[user.X][user.Y] = 100
+				W.UserMap[user.X][user.Y] = user
 			}
 		}
 	} else {
@@ -311,11 +300,13 @@ func (W *WORLD) DrawMap() {
 			} else {
 				visuel = clog.GetColoredString(" X ", "white", "white")
 			}
-			val = W.UserMap[x][y]
-			if val == 1 {
-				visuel = clog.GetColoredString(" Z ", "white", "red")
-			} else if val == 100 {
-				visuel = clog.GetColoredString(" P ", "black", "yellow")
+			User := W.UserMap[x][y]
+			if User != nil {
+				if User.Type == "M" {
+					visuel = clog.GetColoredString(" Z ", "white", "red")
+				} else if User.Type == "P" {
+					visuel = clog.GetColoredString(" P ", "black", "yellow")
+				}
 			}
 			// for _, mob := range W.MobList {
 			// 	if mob.X == x && mob.Y == y {
@@ -375,9 +366,9 @@ func (W *WORLD) loadMap(file string) {
 	W.Height = zemap.Layers[2].Height
 
 	W.Map = make(pathfinder.MapData, W.Width)
-	W.UserMap = make(pathfinder.MapData, W.Width)
+	W.UserMap = make([][]*MOB, W.Width)
 	for i := 0; i < W.Width; i++ {
-		W.UserMap[i] = make([]int, W.Height)
+		W.UserMap[i] = make([]*MOB, W.Height)
 		W.Map[i] = make([]int, W.Height)
 	}
 
@@ -386,14 +377,14 @@ func (W *WORLD) loadMap(file string) {
 		col := 0
 		for col < W.Width {
 			W.Map[col][row] = zemap.Layers[2].Data[(row*W.Width)+col]
-			W.UserMap[col][row] = 0
+			W.UserMap[col][row] = nil
 			col++
 		}
 		row++
 	}
 }
 
-func (W *WORLD) getShortPath(mob *MOB, user *User) *pathfinder.Node {
+func (W *WORLD) getShortPath(mob *MOB, user *MOB) *pathfinder.Node {
 	W.Graph = pathfinder.NewGraph(&W.Map, mob.X, mob.Y, user.X, user.Y)
 	shortest_path := pathfinder.Astar(W.Graph)
 	if len(shortest_path) > 0 {
@@ -417,7 +408,7 @@ func (W *WORLD) testPathFinder() {
 func Init(zeHub *hub.Hub) *WORLD {
 	zeWorld := &WORLD{}
 	zeWorld.MobList = make(map[string]*MOB)
-	zeWorld.UserList = make(map[string]*User)
+	zeWorld.UserList = make(map[string]*MOB)
 	zeWorld.hub = zeHub
 
 	zeWorld.loadMap("../data/zone1.json")
