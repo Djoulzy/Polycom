@@ -2,11 +2,11 @@ package httpserver
 
 import (
 	"bytes"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,6 +14,7 @@ import (
 	"github.com/Djoulzy/Polycom/hub"
 	"github.com/Djoulzy/Polycom/monitoring"
 	"github.com/Djoulzy/Polycom/urlcrypt"
+	"github.com/Djoulzy/Polycom/world/mapper"
 	"github.com/Djoulzy/Tools/clog"
 )
 
@@ -228,15 +229,18 @@ func (m *Manager) Start(conf *Manager) {
 	http.Handle("/js/", http.StripPrefix("/js/", fs))
 
 	http.HandleFunc("/data/", func(w http.ResponseWriter, r *http.Request) {
-		name := ".." + r.URL.Path
-		file, err := os.Open(name)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer file.Close()
+		// name := ".." + r.URL.Path
+		// file, err := os.Open(name)
+		// if err != nil {
+		// 	w.WriteHeader(http.StatusInternalServerError)
+		// 	return
+		// }
+		// defer file.Close()
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		http.ServeContent(w, r, name, time.Now(), file)
+		// http.ServeContent(w, r, name, time.Now(), file)
+		m := mapper.NewMap()
+		mapJSON, _ := json.Marshal(m)
+		w.Write(mapJSON)
 	})
 
 	http.HandleFunc("/test", m.testPage)
