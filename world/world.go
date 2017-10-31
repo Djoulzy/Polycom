@@ -336,19 +336,19 @@ func (W *WORLD) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			start := time.Now()
+			// start := time.Now()
 			W.spawnMob()
 			W.browseMob()
 			if clog.LogLevel == 0 {
 				W.DrawMap()
 			}
-			t := time.Now()
-			elapsed := t.Sub(start)
-			if elapsed >= timeStep {
-				clog.Error("", "", "Operations too long !!")
-			} else {
-				clog.Test("", "", "Operation last %s", elapsed)
-			}
+			// t := time.Now()
+			// elapsed := t.Sub(start)
+			// if elapsed >= timeStep {
+			// 	clog.Error("", "", "Operations too long !!")
+			// } else {
+			// 	clog.Test("", "", "Operation last %s", elapsed)
+			// }
 		default:
 		}
 	}

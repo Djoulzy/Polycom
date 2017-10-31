@@ -1,6 +1,8 @@
 package mapper
 
 import (
+	"fmt"
+	"math"
 	"math/rand"
 
 	opensimplex "github.com/ojrac/opensimplex-go"
@@ -11,22 +13,20 @@ const (
 	MapHeight     = 64
 	TileWidth     = 32
 	TileHeight    = 32
-	MapChipWidth  = 2048
-	MapChipHeight = 2048
+	MapChipWidth  = 448
+	MapChipHeight = 32
 )
 
 const (
 	Void   = 0
-	Wall   = 1
-	Grass  = 200
+	Wall   = 13
+	Grass  = 1
 	Stairs = 55
 )
 
 const (
-	None  = iota
-	Start = iota
-	Goal  = iota
-	Block = iota
+	None  = 0
+	Block = 1
 )
 
 type Map struct {
@@ -74,7 +74,7 @@ func NewMap() *Map {
 		createLayers(),
 		"orthogonal",
 		TileWidth, TileHeight,
-		[]*TileSet{NewTileSet("zombie_tiles")},
+		[]*TileSet{NewTileSet("Travail")},
 		map[string]*Property{},
 		1,
 	}
@@ -95,7 +95,7 @@ func NewLayer(name string, data []int, visible bool) *Layer {
 func NewTileSet(name string) *TileSet {
 	return &TileSet{
 		1,
-		"zombie_tiles.png",
+		"Travail.png",
 		MapChipWidth, MapChipHeight,
 		0,
 		name,
@@ -113,10 +113,10 @@ func createLayers() []*Layer {
 	createMaze(mapData)
 
 	for i, v := range mapData {
-		if v == Wall {
-			collisionData[i] = Block
+		if v >= Wall {
+			collisionData[i] = 1
 		} else {
-			collisionData[i] = None
+			collisionData[i] = 0
 		}
 	}
 
@@ -136,9 +136,9 @@ func createLayers() []*Layer {
 	// objectData[goalIndex] = Stairs
 
 	return []*Layer{
-		NewLayer("obstacles", collisionData, false),
 		NewLayer("terrain", mapData, true),
 		NewLayer("decors", objectData, true),
+		NewLayer("obstacles", collisionData, false),
 	}
 }
 
@@ -160,15 +160,34 @@ func createMaze(mapData []int) {
 	// 		mapData[i] = Grass
 	// 	}
 	// }
-	noise := opensimplex.NewWithSeed(rand.Int63())
+	noise := opensimplex.NewWithSeed(rand.Int63n(256))
 	w, h := MapWidth, MapHeight
 	// heightmap := make([]int, w*h)
+	maxtmp := float64(0)
+	mintmp := float64(0)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			xFloat := float64(x) / float64(w)
 			yFloat := float64(y) / float64(h)
-			mapData[(y*w)+x] = int((noise.Eval2(xFloat, yFloat) + 1) * 100)
+			tmp := noise.Eval2(xFloat, yFloat)
+			if tmp > maxtmp {
+				maxtmp = tmp
+			}
+			if tmp < mintmp {
+				mintmp = tmp
+			}
 		}
+	}
+	mintmp = math.Abs(mintmp)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			xFloat := float64(x) / float64(w)
+			yFloat := float64(y) / float64(h)
+			tmp := noise.Eval2(xFloat, yFloat)
+			mapData[(y*w)+x] = int(((tmp+mintmp)/(mintmp+maxtmp))*13) + 1
+			fmt.Printf("%02d ", mapData[(y*w)+x])
+		}
+		fmt.Printf("\n")
 	}
 }
 
