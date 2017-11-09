@@ -136,7 +136,7 @@ func (W *WORLD) tileIsFree(x, y int) bool {
 }
 
 func (W *WORLD) moveSIMPLE(mob *MOB, prey *MOB) {
-	clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
+	// clog.Info("World", "moveMob", "Seeking for %s", prey.ID)
 	// if math.Abs(float64(prey.X-mob.X)) < math.Abs(float64(prey.Y-mob.Y)) {
 	if mob.Y > prey.Y && W.tileIsFree(mob.X, mob.Y-1) {
 		W.UserMap[mob.X][mob.Y] = nil
