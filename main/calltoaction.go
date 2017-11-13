@@ -107,20 +107,14 @@ func CallToAction(c *hub.Client, message []byte) {
 
 	if c.CType != hub.ClientUndefined {
 		switch cmd_group {
-		case "[NUSR]":
-			fallthrough
 		case "[BCST]":
 			// clog.Trace("", "", "%s", message)
-			zeWorld.CallToAction(cmd_group, action_group)
 			mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			zeHub.Broadcast <- mess
 			if c.CType != hub.ClientServer {
 				mess = hub.NewMessage(c, hub.ClientServer, nil, message)
 				zeHub.Broadcast <- mess
 			}
-		case "[FIRE]":
-			clog.Test("CallToAction", "CallToAction", "%s", message)
-			zeWorld.CallToAction(cmd_group, action_group)
 		case "[UCST]":
 		case "[STOR]":
 			Storage.NewRecord(string(action_group))
@@ -143,8 +137,9 @@ func CallToAction(c *hub.Client, message []byte) {
 			mess := hub.NewMessage(nil, c.CType, c, crypted)
 			zeHub.Unicast <- mess
 		default:
-			mess := hub.NewMessage(nil, c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
-			zeHub.Unicast <- mess
+			// mess := hub.NewMessage(nil, c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
+			// zeHub.Unicast <- mess
+			zeWorld.CallToAction(cmd_group, action_group)
 		}
 	} else {
 		switch cmd_group {
