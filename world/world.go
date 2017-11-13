@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
-	"github.com/Djoulzy/Polycom/world/mapper"
 	"github.com/Djoulzy/Polycom/world/pathfinder"
 	"github.com/Djoulzy/Tools/clog"
 	"github.com/nu7hatch/gouuid"
@@ -322,8 +322,8 @@ func (W *WORLD) DrawMap() {
 			} else {
 				visuel = clog.GetColoredString(" X ", "white", "white")
 			}
-			User := W.EntityMap[x][y].(*MOB)
-			if User != nil {
+			if W.EntityMap[x][y] != nil {
+				User := W.EntityMap[x][y].(*MOB)
 				if User.Type == "M" {
 					visuel = clog.GetColoredString(" Z ", "white", "red")
 				} else if User.Type == "P" {
@@ -377,13 +377,14 @@ func (W *WORLD) Run() {
 }
 
 func (W *WORLD) loadMap(file string) {
-	// var zemap FILEMAP
-	// dat, _ := ioutil.ReadFile(file)
-	// err := json.Unmarshal(dat, &zemap)
-	// if err != nil {
-	// 	clog.Error("", "", "%s", err)
-	// }
-	zemap := mapper.NewMap()
+	var zemap FILEMAP
+	dat, _ := ioutil.ReadFile(file)
+	err := json.Unmarshal(dat, &zemap)
+	if err != nil {
+		clog.Error("", "", "%s", err)
+	}
+
+	// zemap := mapper.NewMap()
 	W.Width = zemap.Layers[2].Width
 	W.Height = zemap.Layers[2].Height
 
