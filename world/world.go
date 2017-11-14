@@ -19,7 +19,7 @@ const (
 	timeStep  = 100 * time.Millisecond // Actualisation 10 par seconde
 	tileSize  = 32
 	mobSpeed  = 8
-	maxMobNum = 100
+	maxMobNum = 1
 )
 
 type Entity struct {
