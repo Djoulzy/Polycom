@@ -139,7 +139,7 @@ func CallToAction(c *hub.Client, message []byte) {
 		default:
 			// mess := hub.NewMessage(nil, c.CType, c, []byte(fmt.Sprintf("%s:?", cmd_group)))
 			// zeHub.Unicast <- mess
-			zeWorld.CallToAction(cmd_group, action_group)
+			zeWorld.CallToAction(c, cmd_group, action_group)
 		}
 	} else {
 		switch cmd_group {

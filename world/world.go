@@ -15,73 +15,6 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
-const (
-	timeStep  = 100 * time.Millisecond // Actualisation 10 par seconde
-	tileSize  = 32
-	mobSpeed  = 8
-	maxMobNum = 1
-)
-
-type Entity struct {
-	ID        string `bson:"id" json:"id"`
-	Type      string `bson:"typ" json:"typ"`
-	Face      string `bson:"png" json:"png"`
-	ComID     int    `bson:"num" json:"num"`
-	Dir       string `bson:"mov" json:"mov"`
-	X         int    `bson:"x" json:"x"` // Col nums
-	Y         int    `bson:"y" json:"y"` // Row nums
-	Pow       int    `bson:"pow" json:"pow"`
-	Speed     int    `bson:"spd" json:"spd"`
-	waitState int
-}
-
-type Attributes struct {
-	PV     int `bson:"pv" json:"pv"`
-	Starv  int `bson:"st" json:"st"`
-	Thirst int `bson:"th" json:"th"`
-	Fight  int `bson:"fgt" json:"fgt"`
-	Shoot  int `bson:"sht" json:"sht"`
-	Craft  int `bson:"cft" json:"cft"`
-	Breed  int `bson:"brd" json:"brd"`
-	Grow   int `bson:"grw" json:"grw"`
-}
-
-type USER struct {
-	Entity
-	Attributes
-}
-
-type MOB struct {
-	Entity
-}
-
-type TILE struct {
-	Type int
-	ID   string
-}
-
-type WORLD struct {
-	hub       *hub.Hub
-	MobList   map[string]*MOB
-	UserList  map[string]*USER
-	Width     int
-	Height    int
-	Map       pathfinder.MapData
-	EntityMap [][]interface{}
-	Graph     *pathfinder.Graph
-}
-
-type FILELAYER struct {
-	Data   []int  `bson:"data" json:"data"`
-	Name   string `bson:"name" json:"name"`
-	Width  int    `bson:"width" json:"width"`
-	Height int    `bson:"height" json:"height"`
-}
-
-type FILEMAP struct {
-	Layers []FILELAYER `bson:"layers" json:"layers"`
-}
-
 func (W *WORLD) findSpawnPlace() (int, int) {
 	for {
 		x := rand.Intn(W.Width)
@@ -111,9 +44,10 @@ func (W *WORLD) spawnMob() {
 		W.EntityMap[mob.X][mob.Y] = mob
 		W.MobList[mob.ID] = mob
 		message := []byte(fmt.Sprintf("[NMOB]%s", mob.ID))
+		W.AOIs.addEvent(mob.X, mob.Y, message)
 		// clog.Info("WORLD", "spawnMob", "Spawning new mob %s", mob.ID)
-		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
-		W.hub.Broadcast <- mess
+		// mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
+		// W.hub.Broadcast <- mess
 	}
 }
 
@@ -145,8 +79,7 @@ func (W *WORLD) findCloserUser(mob *MOB) (*USER, error) {
 func (W *WORLD) sendMobPos(mob *MOB) {
 	json, _ := json.Marshal(mob)
 	message := []byte(fmt.Sprintf("[BCST]%s", json))
-	mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
-	W.hub.Broadcast <- mess
+	W.AOIs.addEvent(mob.X, mob.Y, message)
 	mob.waitState = mob.Speed
 }
 
@@ -272,14 +205,13 @@ func (W *WORLD) checkTargetHit(infos *USER) {
 	}
 	if mobFound != nil {
 		message := []byte(fmt.Sprintf("[KILL]%s", mobFound.ID))
-		mess := hub.NewMessage(nil, hub.ClientUser, nil, message)
-		W.hub.Broadcast <- mess
+		W.AOIs.addEvent(mobFound.X, mobFound.Y, message)
 		delete(W.MobList, mobFound.ID)
 		W.EntityMap[mobFound.X][mobFound.Y] = nil
 	}
 }
 
-func (W *WORLD) CallToAction(cmd string, message []byte) {
+func (W *WORLD) CallToAction(c *hub.Client, cmd string, message []byte) {
 	var infos USER
 	err := json.Unmarshal(message, &infos)
 	if err == nil {
@@ -289,6 +221,7 @@ func (W *WORLD) CallToAction(cmd string, message []byte) {
 		case "[PMOV]":
 			if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
 				clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
+				infos.HubClient = c
 				W.UserList[infos.ID] = &infos
 				W.EntityMap[infos.X][infos.Y] = &infos
 			} else {
@@ -349,6 +282,17 @@ func (W *WORLD) DrawMap() {
 	fmt.Printf("%s", display)
 }
 
+func (W *WORLD) sendWorldUpdate() {
+	W.AOIs.computeUpdates()
+	for _, player := range W.UserList {
+		message, err := W.AOIs.getUpdateForPlayer(player.X, player.Y)
+		if err == nil {
+			mess := hub.NewMessage(nil, hub.ClientUser, player.HubClient, message)
+			W.hub.Unicast <- mess
+		}
+	}
+}
+
 func (W *WORLD) Run() {
 	ticker := time.NewTicker(timeStep)
 	defer func() {
@@ -358,19 +302,21 @@ func (W *WORLD) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			// start := time.Now()
+			start := time.Now()
 			W.spawnMob()
 			W.browseMob()
 			if clog.LogLevel == 0 {
 				W.DrawMap()
 			}
-			// t := time.Now()
-			// elapsed := t.Sub(start)
-			// if elapsed >= timeStep {
-			// 	clog.Error("", "", "Operations too long !!")
-			// } else {
-			// 	clog.Test("", "", "Operation last %s", elapsed)
-			// }
+			W.sendWorldUpdate()
+
+			t := time.Now()
+			elapsed := t.Sub(start)
+			if elapsed >= timeStep {
+				clog.Error("", "", "Operations too long !!")
+			} else {
+				clog.Test("", "", "%c[HOperation last %s", 27, elapsed)
+			}
 		default:
 		}
 	}
@@ -385,8 +331,8 @@ func (W *WORLD) loadMap(file string) {
 	}
 
 	// zemap := mapper.NewMap()
-	W.Width = zemap.Layers[2].Width
-	W.Height = zemap.Layers[2].Height
+	W.Width = zemap.Layers[1].Width
+	W.Height = zemap.Layers[1].Height
 
 	W.Map = make(pathfinder.MapData, W.Width)
 	W.EntityMap = make([][]interface{}, W.Width)
@@ -399,7 +345,7 @@ func (W *WORLD) loadMap(file string) {
 	for row < W.Height {
 		col := 0
 		for col < W.Width {
-			W.Map[col][row] = zemap.Layers[2].Data[(row*W.Width)+col]
+			W.Map[col][row] = zemap.Layers[1].Data[(row*W.Width)+col]
 			W.EntityMap[col][row] = nil
 			col++
 		}
@@ -435,6 +381,9 @@ func Init(zeHub *hub.Hub) *WORLD {
 	zeWorld.hub = zeHub
 
 	zeWorld.loadMap("../data/zone1.json")
+
+	zeWorld.AOIs = BuildAOIList(zeWorld)
+	clog.Trace("", "", "%s", zeWorld.AOIs)
 
 	// m := mapper.NewMap()
 	// mapJSON, _ := json.Marshal(m)

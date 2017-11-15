@@ -224,17 +224,17 @@ func (h *Hub) action(message *Message) {
 }
 
 func (h *Hub) Run() {
-	ticker := time.NewTicker(timeStep)
-	defer func() {
-		ticker.Stop()
-	}()
+	// ticker := time.NewTicker(timeStep)
+	// defer func() {
+	// 	ticker.Stop()
+	// }()
 
 	for {
 		select {
-		case <-ticker.C:
-			if len(BroadcastQueue) > 0 {
-				h.flushBroadcastQueue()
-			}
+		// case <-ticker.C:
+		// 	if len(BroadcastQueue) > 0 {
+		// 		h.flushBroadcastQueue()
+		// 	}
 		case client := <-h.Register:
 			h.register(client)
 			// client.Consistent <- true
