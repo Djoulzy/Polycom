@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -41,6 +43,7 @@ type Manager struct {
 	HandshakeTimeout int
 	CallToAction     func(*hub.Client, []byte)
 	Cryptor          *urlcrypt.Cypher
+	MapGenCallback   func(x, y int) string
 }
 
 func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
@@ -210,6 +213,32 @@ func throttleClients(h http.Handler, n int) http.Handler {
 	})
 }
 
+func (m *Manager) dataServe(w http.ResponseWriter, r *http.Request) {
+	name := ".." + r.URL.Path
+	file, err := os.Open(name)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	http.ServeContent(w, r, name, time.Now(), file)
+	// m := mapper.NewMap()
+	// mapJSON, _ := json.Marshal(m)
+	// w.Write(mapJSON)
+}
+
+func (m *Manager) getMapArea(w http.ResponseWriter, r *http.Request) {
+	query := strings.Split(string(r.URL.Path[1:]), "/")
+	coord := strings.Split(query[1], "_")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	x, _ := strconv.Atoi(coord[0])
+	y, _ := strconv.Atoi(coord[1])
+	str := m.MapGenCallback(x, y)
+	clog.Test("httpserver", "getMapArea", "%s", str)
+}
+
 func (m *Manager) Start(conf *Manager) {
 	m = conf
 	Upgrader = &websocket.Upgrader{
@@ -227,23 +256,10 @@ func (m *Manager) Start(conf *Manager) {
 	fs := http.FileServer(http.Dir("../html/js"))
 	http.Handle("/js/", http.StripPrefix("/js/", fs))
 
-	http.HandleFunc("/data/", func(w http.ResponseWriter, r *http.Request) {
-		name := ".." + r.URL.Path
-		file, err := os.Open(name)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer file.Close()
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		http.ServeContent(w, r, name, time.Now(), file)
-		// m := mapper.NewMap()
-		// mapJSON, _ := json.Marshal(m)
-		// w.Write(mapJSON)
-	})
-
+	http.HandleFunc("/data/", m.dataServe)
 	http.HandleFunc("/test", m.testPage)
 	http.HandleFunc("/status", m.statusPage)
+	http.HandleFunc("/map/", m.getMapArea)
 
 	handler := http.HandlerFunc(m.wsConnect)
 	http.Handle("/ws", throttleClients(handler, m.NBAcceptBySecond))

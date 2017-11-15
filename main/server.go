@@ -75,6 +75,7 @@ func main() {
 	}
 
 	zeHub = hub.NewHub()
+	zeWorld = world.Init(zeHub)
 
 	// Storage = storage.Init()
 
@@ -115,14 +116,13 @@ func main() {
 		NBAcceptBySecond: conf.NBAcceptBySecond,
 		CallToAction:     CallToAction,
 		Cryptor:          Cryptor,
+		MapGenCallback:   zeWorld.GetMapArea,
 	}
 	clog.Output("HTTP Server starting listening on %s", conf.HTTPaddr)
 	go HTTPManager.Start(http_params)
 
 	clog.Output("TCP Server starting listening on %s", conf.TCPaddr)
 	go TCPManager.Start(tcp_params)
-
-	zeWorld = world.Init(zeHub)
 
 	go zeWorld.Run()
 	zeHub.Run()

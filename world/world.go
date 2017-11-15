@@ -302,7 +302,7 @@ func (W *WORLD) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			start := time.Now()
+			// start := time.Now()
 			W.spawnMob()
 			W.browseMob()
 			if clog.LogLevel == 0 {
@@ -310,16 +310,20 @@ func (W *WORLD) Run() {
 			}
 			W.sendWorldUpdate()
 
-			t := time.Now()
-			elapsed := t.Sub(start)
-			if elapsed >= timeStep {
-				clog.Error("", "", "Operations too long !!")
-			} else {
-				clog.Test("", "", "%c[HOperation last %s", 27, elapsed)
-			}
+			// t := time.Now()
+			// elapsed := t.Sub(start)
+			// if elapsed >= timeStep {
+			// 	clog.Error("", "", "Operations too long !!")
+			// } else {
+			// 	clog.Test("", "", "%c[HOperation last %s", 27, elapsed)
+			// }
 		default:
 		}
 	}
+}
+
+func (W *WORLD) GetMapArea(x, y int) string {
+	return "OK"
 }
 
 func (W *WORLD) loadMap(file string) {
