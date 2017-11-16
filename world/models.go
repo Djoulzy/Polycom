@@ -4,16 +4,17 @@ import (
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
-	"github.com/Djoulzy/Polycom/world/pathfinder"
 )
 
 const (
-	timeStep  = 100 * time.Millisecond // Actualisation 10 par seconde
-	tileSize  = 32
-	AOIWidth  = 10
-	AOIHeight = 10
-	mobSpeed  = 8
-	maxMobNum = 10
+	timeStep   = 100 * time.Millisecond // Actualisation 10 par seconde
+	tileSize   = 32
+	AOIWidth   = 10
+	AOIHeight  = 10
+	AreaWidth  = 10
+	AreaHeight = 10
+	mobSpeed   = 8
+	maxMobNum  = 10
 )
 
 type Entity struct {
@@ -56,24 +57,9 @@ type TILE struct {
 }
 
 type WORLD struct {
-	hub       *hub.Hub
-	MobList   map[string]*MOB
-	UserList  map[string]*USER
-	Width     int
-	Height    int
-	Map       pathfinder.MapData
-	EntityMap [][]interface{}
-	Graph     *pathfinder.Graph
-	AOIs      *AOIList
-}
-
-type FILELAYER struct {
-	Data   []int  `bson:"data" json:"data"`
-	Name   string `bson:"name" json:"name"`
-	Width  int    `bson:"width" json:"width"`
-	Height int    `bson:"height" json:"height"`
-}
-
-type FILEMAP struct {
-	Layers []FILELAYER `bson:"layers" json:"layers"`
+	hub      *hub.Hub
+	MobList  map[string]*MOB
+	UserList map[string]*USER
+	Map      *MapData
+	AOIs     *AOIList
 }

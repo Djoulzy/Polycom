@@ -43,7 +43,7 @@ type Manager struct {
 	HandshakeTimeout int
 	CallToAction     func(*hub.Client, []byte)
 	Cryptor          *urlcrypt.Cypher
-	MapGenCallback   func(x, y int) string
+	MapGenCallback   func(x, y int) []byte
 }
 
 func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
@@ -233,10 +233,12 @@ func (m *Manager) getMapArea(w http.ResponseWriter, r *http.Request) {
 	coord := strings.Split(query[1], "_")
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+
 	x, _ := strconv.Atoi(coord[0])
 	y, _ := strconv.Atoi(coord[1])
 	str := m.MapGenCallback(x, y)
-	clog.Test("httpserver", "getMapArea", "%s", str)
+	w.Write(str)
 }
 
 func (m *Manager) Start(conf *Manager) {

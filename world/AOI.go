@@ -19,9 +19,9 @@ type AOI struct {
 type AOIList [][]*AOI
 
 func BuildAOIList(W *WORLD) *AOIList {
-	width := W.Width / AOIWidth
-	height := W.Height / AOIHeight
-	clog.Info("", "", "Map Size: %dx%d -> AOIList: %dx%d", W.Width, W.Height, width, height)
+	width := W.Map.Width / AOIWidth
+	height := W.Map.Height / AOIHeight
+	clog.Info("", "", "Map Size: %dx%d -> AOIList: %dx%d", W.Map.Width, W.Map.Height, width, height)
 
 	var L AOIList
 	L = make(AOIList, width)
