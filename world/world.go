@@ -309,7 +309,7 @@ func Init(zeHub *hub.Hub) *WORLD {
 	zeWorld.hub = zeHub
 	zeWorld.Map = &MapData{}
 
-	zeWorld.Map.loadTiledJSONMap("../data/zone1.json")
+	zeWorld.Map.loadTiledJSONMap("../data/final.json")
 
 	zeWorld.AOIs = BuildAOIList(zeWorld)
 	clog.Trace("", "", "%s", zeWorld.AOIs)
