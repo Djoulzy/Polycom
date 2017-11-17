@@ -214,7 +214,7 @@ func (h *Hub) flushBroadcastQueue() {
 
 func (h *Hub) unicast(message *Message) {
 	message.Dest.Send <- message.Content
-	clog.Debug("Hub", "unicast", "Unicast Message to %s : %s", message.Dest.Name, message.Content)
+	// clog.Debug("Hub", "unicast", "Unicast Message to %s : %s", message.Dest.Name, message.Content)
 	h.SentMessByTicks++
 }
 

@@ -42,7 +42,7 @@ type Attributes struct {
 }
 
 type USER struct {
-	HubClient *hub.Client
+	hubClient *hub.Client
 	Entity
 	Attributes
 }

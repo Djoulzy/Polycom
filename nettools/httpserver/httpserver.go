@@ -44,6 +44,7 @@ type Manager struct {
 	CallToAction     func(*hub.Client, []byte)
 	Cryptor          *urlcrypt.Cypher
 	MapGenCallback   func(x, y int) []byte
+	ClientDisconnect func(string)
 }
 
 func (m *Manager) statusPage(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +105,7 @@ func (m *Manager) Connect() *websocket.Conn {
 
 func (m *Manager) Reader(conn *websocket.Conn, cli *hub.Client) {
 	defer func() {
+		m.ClientDisconnect(cli.Name)
 		m.Hub.Unregister <- cli
 		conn.Close()
 	}()
