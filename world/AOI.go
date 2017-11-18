@@ -99,7 +99,6 @@ func (L AOIList) computeUpdates() {
 func (L *AOIList) getUpdateForPlayer(x, y int) ([]byte, error) {
 	aoi := L.getAOIfromCoord(x, y)
 	if len(aoi.update) > 0 {
-		clog.Test("", "", "updates: %s", aoi.update)
 		return aoi.update, nil
 	} else {
 		return aoi.update, errors.New("No update")

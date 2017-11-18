@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Djoulzy/Polycom/hub"
+	"github.com/Djoulzy/Polycom/storage"
 	"github.com/Djoulzy/Tools/clog"
 	"github.com/nu7hatch/gouuid"
 )
@@ -162,11 +163,53 @@ func (W *WORLD) browseMob() {
 	}
 }
 
-func (W *WORLD) logUser(infos *USER) {
-	if W.UserList[infos.ID] == nil {
-		W.UserList[infos.ID] = infos
-		W.Map.Entities[infos.X][infos.Y] = infos
+func (W *WORLD) DropUser(id string) {
+	user := W.UserList[id]
+	dat, _ := json.Marshal(user)
+	storage.SaveUser(id, dat)
+	message := []byte(fmt.Sprintf("[KILL]%s", id))
+	W.AOIs.addEvent(user.X, user.Y, message)
+
+	W.Map.Entities[user.X][user.Y] = nil
+	delete(W.UserList, id)
+}
+
+func (W *WORLD) LogUser(c *hub.Client) ([]byte, error) {
+	var infos *USER
+	dat, err := storage.LoadUser(c.Name)
+	if err != nil {
+		infos = &USER{
+			Entity: Entity{
+				ID: c.Name, Type: "P", Face: "h1", Dir: "down", X: 25, Y: 25,
+			},
+			Attributes: Attributes{
+				PV: 15, Starv: 15, Thirst: 15,
+			},
+		}
+		dat, err = json.Marshal(infos)
+		if err != nil {
+			clog.Error("World", "logUser", "Cant create user %s", err)
+			return dat, err
+		}
+		storage.SaveUser(c.Name, dat)
+		clog.Warn("World", "logUser", "Creating new user %s", dat)
+	} else {
+		clog.Test("", "", "%s", dat)
+		err := json.Unmarshal(dat, &infos)
+		if err != nil {
+			clog.Error("World", "logUser", "Corrupted data for user %s : %s", c.Name, err)
+			return dat, errors.New("ko")
+		}
+		clog.Info("World", "logUser", "Registering user %s", infos.ID)
 	}
+
+	infos.hubClient = c
+	W.UserList[infos.ID] = infos
+	W.Map.Entities[infos.X][infos.Y] = infos
+
+	message := []byte(fmt.Sprintf("[BCST]%s", dat))
+	W.AOIs.addEvent(infos.X, infos.Y, message)
+	return dat, nil
 }
 
 func (W *WORLD) checkTargetHit(infos *USER) {
@@ -217,20 +260,15 @@ func (W *WORLD) CallToAction(c *hub.Client, cmd string, message []byte) {
 		case "[FIRE]":
 			W.checkTargetHit(&infos)
 		case "[PMOV]":
-			if (infos.Type == "P") && (W.UserList[infos.ID]) == nil {
-				clog.Warn("World", "CallToAction", "Registering user %s", infos.ID)
-				infos.HubClient = c
-				W.UserList[infos.ID] = &infos
-				W.Map.Entities[infos.X][infos.Y] = &infos
-			} else {
-				user := W.UserList[infos.ID]
-				W.Map.Entities[user.X][user.Y] = nil
-				user.X = infos.X
-				user.Y = infos.Y
-				W.Map.Entities[user.X][user.Y] = user
-			}
+			user := W.UserList[infos.ID]
+			W.Map.Entities[user.X][user.Y] = nil
+			user.X = infos.X
+			user.Y = infos.Y
+			W.Map.Entities[user.X][user.Y] = user
 			mess := []byte(fmt.Sprintf("[BCST]%s", message))
 			W.AOIs.addEvent(infos.X, infos.Y, mess)
+		default:
+			clog.Warn("World", "CallToAction", "Bad Action : %s", cmd)
 		}
 	} else {
 		clog.Warn("World", "CallToAction", "%s", err)
@@ -242,7 +280,7 @@ func (W *WORLD) sendWorldUpdate() {
 	for _, player := range W.UserList {
 		message, err := W.AOIs.getUpdateForPlayer(player.X, player.Y)
 		if err == nil {
-			mess := hub.NewMessage(nil, hub.ClientUser, player.HubClient, message)
+			mess := hub.NewMessage(nil, hub.ClientUser, player.hubClient, message)
 			W.hub.Unicast <- mess
 		}
 	}

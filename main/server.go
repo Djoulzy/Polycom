@@ -8,7 +8,6 @@ import (
 	"github.com/Djoulzy/Polycom/nettools/httpserver"
 	"github.com/Djoulzy/Polycom/nettools/scaling"
 	"github.com/Djoulzy/Polycom/nettools/tcpserver"
-	"github.com/Djoulzy/Polycom/storage"
 	"github.com/Djoulzy/Polycom/urlcrypt"
 	"github.com/Djoulzy/Polycom/world"
 
@@ -23,7 +22,8 @@ var Cryptor *urlcrypt.Cypher
 var HTTPManager httpserver.Manager
 var TCPManager tcpserver.Manager
 var ScaleList *scaling.ServersList
-var Storage *storage.Driver
+
+// var Storage *storage.Driver
 
 var zeWorld *world.WORLD
 var zeHub *hub.Hub
@@ -77,8 +77,6 @@ func main() {
 	zeHub = hub.NewHub()
 	zeWorld = world.Init(zeHub)
 
-	// Storage = storage.Init()
-
 	mon_params := &monitoring.Params{
 		ServerID:          conf.Name,
 		Httpaddr:          conf.HTTPaddr,
@@ -117,6 +115,7 @@ func main() {
 		CallToAction:     CallToAction,
 		Cryptor:          Cryptor,
 		MapGenCallback:   zeWorld.GetMapArea,
+		ClientDisconnect: zeWorld.DropUser,
 	}
 	clog.Output("HTTP Server starting listening on %s", conf.HTTPaddr)
 	go HTTPManager.Start(http_params)

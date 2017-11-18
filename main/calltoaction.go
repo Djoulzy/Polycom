@@ -37,9 +37,14 @@ func welcomeNewUser(c *hub.Client, newName string, app_id string) {
 			// message := []byte(fmt.Sprintf("[NUSR]%s", c.Name))
 			// mess := hub.NewMessage(c, hub.ClientUser, nil, message)
 			// zeHub.Broadcast <- mess
-			message := []byte(fmt.Sprintf("[WLCM]%s", c.Name))
-			mess := hub.NewMessage(nil, hub.ClientUser, c, message)
-			zeHub.Unicast <- mess
+			infos, err := zeWorld.LogUser(c)
+			if err != nil {
+				zeHub.Unregister <- c
+			} else {
+				message := []byte(fmt.Sprintf("[WLCM]%s", infos))
+				mess := hub.NewMessage(nil, hub.ClientUser, c, message)
+				zeHub.Unicast <- mess
+			}
 		}
 	} else {
 		clog.Warn("server", "welcomeNewUser", "Can't identify client... Disconnecting %s.", c.Name)
@@ -115,9 +120,9 @@ func CallToAction(c *hub.Client, message []byte) {
 				mess = hub.NewMessage(c, hub.ClientServer, nil, message)
 				zeHub.Broadcast <- mess
 			}
-		case "[UCST]":
-		case "[STOR]":
-			Storage.NewRecord(string(action_group))
+		// case "[UCST]":
+		// case "[STOR]":
+		// 	Storage.NewRecord(string(action_group))
 		case "[QUIT]":
 			zeHub.Unregister <- c
 			// <-c.Consistent
