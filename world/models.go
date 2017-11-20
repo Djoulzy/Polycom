@@ -14,7 +14,7 @@ const (
 	AreaWidth  = 10
 	AreaHeight = 10
 	mobSpeed   = 8
-	maxMobNum  = 1000
+	maxMobNum  = 0
 )
 
 type Entity struct {
