@@ -11,8 +11,8 @@ const (
 	tileSize   = 32
 	AOIWidth   = 10
 	AOIHeight  = 10
-	AreaWidth  = 10
-	AreaHeight = 10
+	AreaWidth  = 50
+	AreaHeight = 50
 	mobSpeed   = 8
 	maxMobNum  = 0
 )
