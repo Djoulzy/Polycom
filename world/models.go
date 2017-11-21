@@ -7,14 +7,12 @@ import (
 )
 
 const (
-	timeStep   = 100 * time.Millisecond // Actualisation 10 par seconde
-	tileSize   = 32
-	AOIWidth   = 10
-	AOIHeight  = 10
-	AreaWidth  = 50
-	AreaHeight = 50
-	mobSpeed   = 8
-	maxMobNum  = 0
+	timeStep  = 100 * time.Millisecond // Actualisation 10 par seconde
+	tileSize  = 32
+	AOIWidth  = 10
+	AOIHeight = 10
+	mobSpeed  = 8
+	maxMobNum = 0
 )
 
 type Entity struct {

@@ -94,33 +94,58 @@ func (M *MapData) loadTiledJSONMap(file string) {
 }
 
 func (M *MapData) ExportMapArea(x, y int) []byte {
+	var startx, starty int
 	tmp := M.FileData
-	tmp.Layers[0].Data = make([]int, AreaWidth*AreaHeight)
-	tmp.Layers[1].Data = make([]int, AreaWidth*AreaHeight)
-	tmp.Height = AreaHeight
-	tmp.Width = AreaWidth
 
-	startx := x * AreaWidth
-	starty := y * AreaHeight
+	if x-1 < 0 {
+		startx = 0
+		tmp.Width = AOIWidth * 2
+	} else {
+		startx = (x - 1) * AOIWidth
+		tmp.Width = AOIWidth * 3
+	}
+
+	if y-1 < 0 {
+		starty = 0
+		tmp.Height = AOIHeight * 2
+	} else {
+		starty = (y - 1) * AOIHeight
+		tmp.Height = AOIHeight * 3
+	}
+
+	tmp.Layers[0].Data = make([]int, tmp.Width*tmp.Height)
+	tmp.Layers[1].Data = make([]int, tmp.Width*tmp.Height)
 
 	cpt := 0
-	for j := starty; j < starty+AreaHeight; j++ {
-		for i := startx; i < startx+AreaWidth; i++ {
+	for j := starty; j < starty+tmp.Height; j++ {
+		for i := startx; i < startx+tmp.Width; i++ {
 			tmp.Layers[0].Data[cpt] = M.Ground[i][j]
 			tmp.Layers[1].Data[cpt] = M.Block[i][j]
 			cpt++
 		}
 	}
 
-	tmp.Layers[0].Width = AreaWidth
-	tmp.Layers[0].Height = AreaHeight
-	tmp.Layers[0].Offsetx = startx * tmp.Tilewidth
-	tmp.Layers[0].Offsety = starty * tmp.Tileheight
+	tmp.Layers[0].Width = tmp.Width
+	tmp.Layers[0].Height = tmp.Height
+	tmp.Layers[0].X = startx * tmp.Tilewidth
+	tmp.Layers[0].Y = starty * tmp.Tileheight
+	tmp.Layers[0].Offsetx = 0
+	tmp.Layers[0].Offsety = 0
+	// tmp.Layers[0].X = 0
+	// tmp.Layers[0].Y = 0
+	// tmp.Layers[0].Offsetx = startx * tmp.Tilewidth
+	// tmp.Layers[0].Offsety = starty * tmp.Tileheight
 
-	tmp.Layers[1].Width = AreaWidth
-	tmp.Layers[1].Height = AreaHeight
-	tmp.Layers[1].Offsetx = startx * tmp.Tilewidth
-	tmp.Layers[1].Offsety = starty * tmp.Tileheight
+	tmp.Layers[1].Width = tmp.Width
+	tmp.Layers[1].Height = tmp.Height
+	tmp.Layers[1].X = startx * tmp.Tilewidth
+	tmp.Layers[1].Y = starty * tmp.Tileheight
+	tmp.Layers[1].Offsetx = 0
+	tmp.Layers[1].Offsety = 0
+	// tmp.Layers[1].X = 0
+	// tmp.Layers[1].Y = 0
+	// tmp.Layers[1].Offsetx = startx * tmp.Tilewidth
+	// tmp.Layers[1].Offsety = starty * tmp.Tileheight
 
 	json, _ := json.MarshalIndent(tmp, "", "    ")
 	return json
