@@ -127,25 +127,25 @@ func (M *MapData) ExportMapArea(x, y int) []byte {
 
 	tmp.Layers[0].Width = tmp.Width
 	tmp.Layers[0].Height = tmp.Height
-	tmp.Layers[0].X = startx * tmp.Tilewidth
-	tmp.Layers[0].Y = starty * tmp.Tileheight
-	tmp.Layers[0].Offsetx = 0
-	tmp.Layers[0].Offsety = 0
-	// tmp.Layers[0].X = 0
-	// tmp.Layers[0].Y = 0
-	// tmp.Layers[0].Offsetx = startx * tmp.Tilewidth
-	// tmp.Layers[0].Offsety = starty * tmp.Tileheight
+	// tmp.Layers[0].X = startx * tmp.Tilewidth
+	// tmp.Layers[0].Y = starty * tmp.Tileheight
+	// tmp.Layers[0].Offsetx = 0
+	// tmp.Layers[0].Offsety = 0
+	tmp.Layers[0].X = 0
+	tmp.Layers[0].Y = 0
+	tmp.Layers[0].Offsetx = startx * tmp.Tilewidth
+	tmp.Layers[0].Offsety = starty * tmp.Tileheight
 
 	tmp.Layers[1].Width = tmp.Width
 	tmp.Layers[1].Height = tmp.Height
-	tmp.Layers[1].X = startx * tmp.Tilewidth
-	tmp.Layers[1].Y = starty * tmp.Tileheight
-	tmp.Layers[1].Offsetx = 0
-	tmp.Layers[1].Offsety = 0
-	// tmp.Layers[1].X = 0
-	// tmp.Layers[1].Y = 0
-	// tmp.Layers[1].Offsetx = startx * tmp.Tilewidth
-	// tmp.Layers[1].Offsety = starty * tmp.Tileheight
+	// tmp.Layers[1].X = startx * tmp.Tilewidth
+	// tmp.Layers[1].Y = starty * tmp.Tileheight
+	// tmp.Layers[1].Offsetx = 0
+	// tmp.Layers[1].Offsety = 0
+	tmp.Layers[1].X = 0
+	tmp.Layers[1].Y = 0
+	tmp.Layers[1].Offsetx = startx * tmp.Tilewidth
+	tmp.Layers[1].Offsety = starty * tmp.Tileheight
 
 	json, _ := json.MarshalIndent(tmp, "", "    ")
 	return json
